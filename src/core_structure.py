@@ -17,43 +17,43 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 
 # ---------------------------------------------------------------------------
-# Metadata with attribute + dict access
+# Metadata representations
 # ---------------------------------------------------------------------------
 
 class Metadata:
     """Lightweight metadata container with dict + attribute access."""
-    def __init__(self, data: Optional[Dict[str, Any]] = None):
+    def __init__(self, data: Optional[Dict[str, Any]] = None) -> None:
         self._data: Dict[str, Any] = data or {}
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Any:
         return self._data.get(key, None)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         self._data[key] = value
 
-    def __getattr__(self, key):
+    def __getattr__(self, key) -> Any:
         if key in self._data:
             return self._data[key]
         raise AttributeError(
-            f"Invalid field: metadata field must be in {self._data.keys()}. ",
+            f"Invalid field: metadata field must be in {list(self._data.keys())}. ",
             f"Got field='{key}'")
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key, value) -> None:
         if key == "_data":
             super().__setattr__(key, value)
         else:
             self._data[key] = value
+    
+    def __repr__(self) -> str:
+        return f"Metadata(data={self._data})"
 
     def to_dict(self) -> Dict[str, Any]:
         return dict(self._data)
 
-    def update(self, other: Dict[str, Any], overwrite=True):
+    def update(self, other: Dict[str, Any], overwrite=True) -> None:
         for k, v in other.items():
             if overwrite or k not in self._data:
                 self._data[k] = v
-
-    def __repr__(self):
-        return f"Metadata({self._data})"
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ class Spectrum:
         Optional metadata such as instrument info, acquisition parameters, or sample ID.
     """
 
-    def __init__(self, wavenumbers: np.ndarray, intensities: np.ndarray, metadata: Optional[Dict[str, Any]] = None):
+    def __init__(self, wavenumbers: np.ndarray, intensities: np.ndarray, metadata: Optional[Dict[str, Any]] = None) -> None:
         w: np.ndarray = np.asarray(wavenumbers)
         i: np.ndarray = np.asanyarray(intensities)
 
@@ -93,9 +93,20 @@ class Spectrum:
         self._metadata: Metadata = Metadata(metadata)
         self.sort()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Spectrum(wavenumbers=array(shape={self._wavenumbers.shape}), intensities=array(shape={self._intensities.shape}), metadata={self._metadata})"
     
+    def __len__(self) -> int:
+        return len(self.wavenumbers)
+    
+    @property
+    def metadata(self) -> Metadata:
+        return self._metadata
+    
+    @metadata.setter
+    def metadata(self, metadata: Metadata) -> None:
+        self.metadata = metadata
+
     @property
     def wavenumbers(self) -> np.ndarray:
         return self._wavenumbers
@@ -126,6 +137,14 @@ class Spectrum:
             )
         self._intensities = i
 
+    @property
+    def resolution(self) -> np.int64:
+        return abs(np.diff(self._wavenumbers)).max()
+    
+    @property
+    def range(self) -> Tuple[np.int64, np.int64]:
+        return self._wavenumbers.min(), self._wavenumbers.max()
+
     def update(self, wavenumbers: np.ndarray, intensities: np.ndarray) -> None:
         w: np.ndarray = np.asarray(wavenumbers)
         i: np.ndarray = np.asarray(intensities)
@@ -136,6 +155,7 @@ class Spectrum:
                 f"Got wavenumbers.shape={w.shape} and intensities.shape={i.shape}"
             )
         self._wavenumbers, self._intensities = w, i
+        self.sort()
 
     def sort(self, reverse=False):
         sorted_idx: np.ndarray = self._wavenumbers.argsort()
@@ -145,6 +165,12 @@ class Spectrum:
 
         self._wavenumbers = self._wavenumbers[sorted_idx]
         self._intensities = self._intensities[sorted_idx]
+
+class Measurement:
+    def __init__(self, spectra: List[Spectrum], metadata: Optional[dict[str, Any]] = None):
+        self.spectra: List[Spectrum] = spectra
+        self._metadata: Metadata = Metadata(metadata)
+
 
 class Dataset:
     """
