@@ -10,10 +10,10 @@ clinical translation.
 It is implementation-agnostic and focuses on structure, documentation, and expected inputs/outputs.
 """
 
-from typing import List, Tuple, Dict, Any, Optional
+from typing import Self, List, Tuple, Dict, Any, Optional
 import numpy as np
 from sklearn.base import BaseEstimator
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 import numpy as np
 
 # ---------------------------------------------------------------------------
@@ -55,6 +55,46 @@ class Metadata:
             if overwrite or k not in self._data:
                 self._data[k] = v
 
+class Profile:
+    """
+    Represents the spatial layout of spectra in a Measurement.
+    
+    Can describe 1D line scans, 2D lines/depth scans, 3D volume scans, or an aribitrary collection of points.
+    
+    Parameters
+    ----------
+    positions : Optional[ndarray]
+        Spectral coordinates for each spectrum.
+    type : Literal['single', 'line', 'map', 'volume', 'point_cloud']
+        Measurement profile type.
+        """
+    def __init__(self, positions: Optional[np.ndarray] = None, type: Literal['single', 'line', 'map', 'volume', 'point_cloud'] = None):
+        pos: np.ndarray = np.asarray(positions) or None
+        shap: Tuple[int, ...]  = pos.shape[:-1] if pos is not None else None
+        ndim: int = pos.ndim - 1
+        t: str = type
+
+        valid_types: List[str] = ['single', 'line', 'map', 'volume', 'point_cloud']
+
+        if t not in valid_types:
+            raise ValueError(
+                f"Invalid value: type not in valid types {valid_types}. "
+                f"Got type={t}"
+            )
+        
+        # TODO: if positions and type is passed check match. 'single' -> pos.ndim - 1 = 0, 'line' -> pos.ndim - 1 = 1, 'map' -> pos.ndim - 1 = 2, 'volume' -> pos.ndim - 1 = 3, 'point_cloud' -> pos.ndim - 1 = 0
+    
+    @property
+    def positions(self) -> np.ndarray:
+        return self._positions
+    
+    @property
+    def shape(self) -> np.shape:
+        return self._shape
+    
+    @property
+    def type(self) -> str:
+        return self._type
 
 # ---------------------------------------------------------------------------
 # Data representations
@@ -99,6 +139,24 @@ class Spectrum:
     def __len__(self) -> int:
         return len(self.wavenumbers)
     
+    def __add__(self, other: Self) -> Self:
+        if not isinstance(other, Spectrum):
+            raise TypeError(
+                f"Invalid type: objects must both be of type Spectrum. "
+                f"Got type={type(other).__name__}"
+            )
+        if not self._wavenumbers == other.wavenumbers:
+            raise ValueError(
+                f"Invalid wavenumbers: Spectrum objects must have identical wavenumbers. "
+                f"Got wavenumbers={self._wavenumbers} and wavenumbers={other.wavenumbers}"
+            )
+        
+        i: np.ndarray = self._intensities + other.intensities
+        m: Metadata = self._metadata
+
+        # TODO: merge metadata from Spectrum objects
+        return Spectrum(self._wavenumbers, i, metadata=m)
+    
     @property
     def metadata(self) -> Metadata:
         return self._metadata
@@ -118,7 +176,7 @@ class Spectrum:
         if hasattr(self, "_intensities") and self._intensities is not None and w.shape != self._intensities.shape:
             raise ValueError(
                 f"Invalid shape: wavenumbers and intensities must have the same shape. "
-                f"Got wavenumbers.shape={w.shape} and intensities.shape={self._intensities.shape}"
+                f"Got wavenumbers.shape={w.shape} and self.intensities.shape={self._intensities.shape}"
             )
         self.wavenumbers = w
 
@@ -133,7 +191,7 @@ class Spectrum:
         if hasattr(self, "_wavenumbers") and self._wavenumbers is not None and i.shape != self._wavenumbers.shape:
             raise ValueError(
                 f"Invalid shape: wavenumbers and intensities must have the same shape. "
-                f"Got wavenumbers.shape={self._wavenumbers.shape} and intensities.shape={i.shape}"
+                f"Got self.wavenumbers.shape={self._wavenumbers.shape} and intensities.shape={i.shape}"
             )
         self._intensities = i
 
@@ -166,28 +224,28 @@ class Spectrum:
         self._wavenumbers = self._wavenumbers[sorted_idx]
         self._intensities = self._intensities[sorted_idx]
 
-class Measurement:
-    def __init__(self, spectra: List[Spectrum], metadata: Optional[dict[str, Any]] = None):
-        self.spectra: List[Spectrum] = spectra
-        self._metadata: Metadata = Metadata(metadata)
+# class Measurement:
+#     def __init__(self, spectra: List[Spectrum], metadata: Optional[dict[str, Any]] = None):
+#         self.spectra: List[Spectrum] = spectra
+#         self._metadata: Metadata = Metadata(metadata)
 
 
-class Dataset:
-    """
-    Represents a collection of spectra and their associated labels.
+# class Dataset:
+#     """
+#     Represents a collection of spectra and their associated labels.
 
-    Attributes
-    ----------
-    spectra : List[Spectrum]
-        List of Spectrum objects.
-    labels : Optional[List[Any]]
-        Optional list of sample labels (e.g., clinical class, bacterial species).
-    metadata : dict
-        Dataset-level metadata.
-    """
+#     Attributes
+#     ----------
+#     spectra : List[Spectrum]
+#         List of Spectrum objects.
+#     labels : Optional[List[Any]]
+#         Optional list of sample labels (e.g., clinical class, bacterial species).
+#     metadata : dict
+#         Dataset-level metadata.
+#     """
 
-    def __init__(self, spectra: List[Spectrum], labels: Optional[List[Any]] = None, metadata: Optional[dict] = None):
-        pass
+#     def __init__(self, spectra: List[Spectrum], labels: Optional[List[Any]] = None, metadata: Optional[dict] = None):
+#         pass
 
 
 # ---------------------------------------------------------------------------
