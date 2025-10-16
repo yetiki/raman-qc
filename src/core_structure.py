@@ -13,15 +13,20 @@ It is implementation-agnostic and focuses on structure, documentation, and expec
 from typing import Self, List, Tuple, Dict, Any, Optional
 import numpy as np
 from sklearn.base import BaseEstimator
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Set, Literal, Optional, Union
 import numpy as np
 
-# ---------------------------------------------------------------------------
-# Metadata representations
-# ---------------------------------------------------------------------------
-
 class Metadata:
-    """Lightweight metadata container with dict + attribute access."""
+    """
+    A lightweight container for arbitrary metadata associated with any
+    spectroscopic object (i.e. Spectrum, Measurement, or Dataset).
+    Provides dict + attribute access.
+
+    Attributes
+    ----------
+    data : Dict[str, Any], optional
+        The metadata key and values associated with the spectroscopic object.
+    """
     def __init__(self, data: Optional[Dict[str, Any]] = None) -> None:
         self._data: Dict[str, Any] = data or {}
 
@@ -36,7 +41,7 @@ class Metadata:
             return self._data[key]
         raise AttributeError(
             f"Invalid field: metadata field must be in {list(self._data.keys())}. ",
-            f"Got field='{key}'")
+            f"Got field='{key}'.")
 
     def __setattr__(self, key, value) -> None:
         if key == "_data":
@@ -46,6 +51,12 @@ class Metadata:
     
     def __repr__(self) -> str:
         return f"Metadata(data={self._data})"
+    
+    @classmethod
+    def as_metadata(cls, other: Union[Dict[str, Any], Self]) -> Self:
+        if not isinstance(other, cls):
+            return cls(other)
+        return other
 
     def to_dict(self) -> Dict[str, Any]:
         return dict(self._data)
@@ -54,35 +65,54 @@ class Metadata:
         for k, v in other.items():
             if overwrite or k not in self._data:
                 self._data[k] = v
+    
+    def merge(self, other: Self) -> Self:
+        merged: Dict[str, Any] = self._data.copy()
+        merged.update(other.to_dict())
+        return Metadata(merged)
 
 class Profile:
     """
-    Represents the spatial layout of spectra in a Measurement.
-    
+    Represents the spatial organisation of spectra within a single Raman Measurement.
     Can describe 1D line scans, 2D lines/depth scans, 3D volume scans, or an aribitrary collection of points.
     
-    Parameters
+    Attributes
     ----------
-    positions : Optional[ndarray]
-        Spectral coordinates for each spectrum.
-    type : Literal['single', 'line', 'map', 'volume', 'point_cloud']
-        Measurement profile type.
-        """
-    def __init__(self, positions: Optional[np.ndarray] = None, type: Literal['single', 'line', 'map', 'volume', 'point_cloud'] = None):
-        pos: np.ndarray = np.asarray(positions) or None
-        shap: Tuple[int, ...]  = pos.shape[:-1] if pos is not None else None
-        ndim: int = pos.ndim - 1
-        t: str = type
+    type : {'point', 'line', 'map', 'volume'}, optional
+        The type of measurement profile.
+    positions : array-like, shape (n_spectra, n_dims), optional
+        Spatial coordinates for each spectrum (e.g. [x, y] positions).
+    shape : tuple[int], optional
+        Shape of the measurement grid (e.g. (rows, cols) for a map).
 
-        valid_types: List[str] = ['single', 'line', 'map', 'volume', 'point_cloud']
+    Notes
+    -----
+    - `positions` defines the coordinates of each spectrum.
+    - `shape` defines the grid arrangement, if applicable.
+    - Both must be consistent in length (len(positions) == np.prod(shape)).
+    """
 
-        if t not in valid_types:
-            raise ValueError(
-                f"Invalid value: type not in valid types {valid_types}. "
-                f"Got type={t}"
-            )
-        
-        # TODO: if positions and type is passed check match. 'single' -> pos.ndim - 1 = 0, 'line' -> pos.ndim - 1 = 1, 'map' -> pos.ndim - 1 = 2, 'volume' -> pos.ndim - 1 = 3, 'point_cloud' -> pos.ndim - 1 = 0
+    VALID_TYPES: Set[str] = {'point', 'line', 'map', 'volume'}
+
+    def __init__(self, profile_type: Optional[str] = None, positions: Optional[np.ndarray] = None, shape: Optional[Tuple[int, ...]] = None) -> None:
+        ...
+        # TODO: Select appropriate profile constructor for measurement class use
+
+        # if profile_type is not None and profile_type not in self.VALID_TYPES:
+        #     raise ValueError(
+        #         f"Invalid profile_type: profile_type must be in {self.VALID_TYPES}. "
+        #         f"Got profile_type={profile_type}."
+        #     )
+        # self.profile_type: str = profile_type
+
+        # self._positions: np.ndarray = positions
+        # self._shape: Tuple[int, ...] = shape #TODO: check n_spectra in shape matches n_spectr in positions
+
+    def __repr__(self) -> str:
+        return f"Profile(type={self.profile_type}, positions={None if self._positions is None else len(self._positions)}, shape={self._shape})"
+
+    def __len__(self) -> int:
+        return 0 if self._positions is None else len(self.positions)
     
     @property
     def positions(self) -> np.ndarray:
@@ -94,15 +124,14 @@ class Profile:
     
     @property
     def type(self) -> str:
-        return self._type
+        return self.profile_type
 
 # ---------------------------------------------------------------------------
 # Data representations
-# ---------------------------------------------------------------------------
 
 class Spectrum:
     """
-    Represents a single Raman spectrum and its metadata.
+    Represents a single Raman spectrum and its associated metadata.
 
     - Validates shapes on construction and when attributes are updated.
     - Uses private attributes to avoid recursive property access.
@@ -111,30 +140,19 @@ class Spectrum:
     Attributes
     ----------
     wavenumbers : np.ndarray
-        The Raman shift axis (in cm⁻¹).
+        1D Raman shift axis array.
     intensities : np.ndarray
-        The measured intensity values corresponding to each wavenumber. Shape must be same as wavenumbers.
-    metadata : dict
-        Optional metadata such as instrument info, acquisition parameters, or sample ID.
+        1D measured intensity array corresponding to each wavenumber. Shape must be the same as wavenumbers.
+    metadata : dict, or Metadata, optional
+        Optional metadata such as sample ID, instrument info, or acquisition parameters.
     """
 
-    def __init__(self, wavenumbers: np.ndarray, intensities: np.ndarray, metadata: Optional[Dict[str, Any]] = None) -> None:
-        w: np.ndarray = np.asarray(wavenumbers)
-        i: np.ndarray = np.asanyarray(intensities)
-
-        if w.shape != i.shape:
-            raise ValueError(
-                f"Invalid shape: wavenumbers and intensities must have the same shape. "
-                f"Got wavenumbers.shape={w.shape} and intensities.shape={i.shape}"
-            )
-        
-        self._wavenumbers: np.ndarray = w
-        self._intensities: np.ndarray = i
-        self._metadata: Metadata = Metadata(metadata)
-        self.sort()
+    def __init__(self, wavenumbers: np.ndarray, intensities: np.ndarray, metadata: Optional[Union[Dict[str, Any], Metadata]] = None) -> None:
+        self.update(wavenumbers, intensities)
+        self.metadata: Metadata = Metadata.as_metadata(metadata) or None
 
     def __repr__(self) -> str:
-        return f"Spectrum(wavenumbers=array(shape={self._wavenumbers.shape}), intensities=array(shape={self._intensities.shape}), metadata={self._metadata})"
+        return f"Spectrum(wavenumbers=array(shape={self.wavenumbers.shape}), intensities=array(shape={self.intensities.shape}), metadata={self.metadata})"
     
     def __len__(self) -> int:
         return len(self.wavenumbers)
@@ -145,25 +163,24 @@ class Spectrum:
                 f"Invalid type: objects must both be of type Spectrum. "
                 f"Got type={type(other).__name__}"
             )
-        if not self._wavenumbers == other.wavenumbers:
+        if not (self.wavenumbers == other.wavenumbers).all():
             raise ValueError(
                 f"Invalid wavenumbers: Spectrum objects must have identical wavenumbers. "
-                f"Got wavenumbers={self._wavenumbers} and wavenumbers={other.wavenumbers}"
+                f"Got wavenumbers={self.wavenumbers} and wavenumbers={other.wavenumbers}"
             )
         
         i: np.ndarray = self._intensities + other.intensities
-        m: Metadata = self._metadata
+        m: Metadata = self._metadata.merge(other.metadata)
 
-        # TODO: merge metadata from Spectrum objects
-        return Spectrum(self._wavenumbers, i, metadata=m)
+        return Spectrum(self.wavenumbers, i, metadata=m)
     
     @property
     def metadata(self) -> Metadata:
         return self._metadata
     
     @metadata.setter
-    def metadata(self, metadata: Metadata) -> None:
-        self.metadata = metadata
+    def metadata(self, metadata: Union[Dict[str, Any], Metadata]) -> None:
+        self._metadata = Metadata.as_metadata(metadata)
 
     @property
     def wavenumbers(self) -> np.ndarray:
@@ -173,12 +190,18 @@ class Spectrum:
     def wavenumbers(self, wavenumbers: np.ndarray) -> None:
         w: np.ndarray = np.asarray(wavenumbers)
 
-        if hasattr(self, "_intensities") and self._intensities is not None and w.shape != self._intensities.shape:
+        if w.ndim != 1:
+            raise ValueError(
+                f"Invalid shape: wavenumbers must be 1-dimensional. "
+                f"Got wavenumbers.ndim={w.ndim}."
+            )
+
+        if hasattr(self, "intensities") and self.intensities is not None and w.shape != self.intensities.shape:
             raise ValueError(
                 f"Invalid shape: wavenumbers and intensities must have the same shape. "
-                f"Got wavenumbers.shape={w.shape} and self.intensities.shape={self._intensities.shape}"
+                f"Got wavenumbers.shape={w.shape} and self.intensities.shape={self.intensities.shape}."
             )
-        self.wavenumbers = w
+        self._wavenumbers = w
 
     @property
     def intensities(self) -> np.ndarray:
@@ -188,20 +211,31 @@ class Spectrum:
     def intensities(self, intensities: np.ndarray) -> None:
         i: np.ndarray = np.asarray(intensities)
 
-        if hasattr(self, "_wavenumbers") and self._wavenumbers is not None and i.shape != self._wavenumbers.shape:
+        if i.ndim != 1:
+            raise ValueError(
+                f"Invalid shape: intensities must be 1-dimensional. "
+                f"Got intensities.ndim={i.ndim}. "
+                f"Use Measurement() for multiple spectra."
+            )
+
+        if hasattr(self, "wavenumbers") and self.wavenumbers is not None and i.shape != self.wavenumbers.shape:
             raise ValueError(
                 f"Invalid shape: wavenumbers and intensities must have the same shape. "
-                f"Got self.wavenumbers.shape={self._wavenumbers.shape} and intensities.shape={i.shape}"
+                f"Got self.wavenumbers.shape={self.wavenumbers.shape} and intensities.shape={i.shape}."
             )
         self._intensities = i
-
-    @property
-    def resolution(self) -> np.int64:
-        return abs(np.diff(self._wavenumbers)).max()
     
     @property
-    def range(self) -> Tuple[np.int64, np.int64]:
-        return self._wavenumbers.min(), self._wavenumbers.max()
+    def n_points(self) -> int:
+        return len(self.wavenumbers)
+
+    @property
+    def resolution(self) -> int:
+        return abs(np.diff(self.wavenumbers)).max()
+    
+    @property
+    def wavenumber_range(self) -> Tuple[int, int]:
+        return self.wavenumbers.min(), self.wavenumbers.max()
 
     def update(self, wavenumbers: np.ndarray, intensities: np.ndarray) -> None:
         w: np.ndarray = np.asarray(wavenumbers)
@@ -210,42 +244,135 @@ class Spectrum:
         if w.shape != i.shape:
             raise ValueError(
                 f"Invalid shape: wavenumbers and intensities must have the same shape. "
-                f"Got wavenumbers.shape={w.shape} and intensities.shape={i.shape}"
+                f"Got wavenumbers.shape={w.shape} and intensities.shape={i.shape}."
             )
-        self._wavenumbers, self._intensities = w, i
+        
+        self.wavenumbers, self.intensities = w, i
         self.sort()
 
-    def sort(self, reverse=False):
-        sorted_idx: np.ndarray = self._wavenumbers.argsort()
+    def sort(self, reverse=False) -> None:
+        sorted_idx: np.ndarray = self.wavenumbers.argsort()
 
         if reverse:
             sorted_idx = sorted_idx[::-1]
 
-        self._wavenumbers = self._wavenumbers[sorted_idx]
-        self._intensities = self._intensities[sorted_idx]
+        self.wavenumbers = self.wavenumbers[sorted_idx]
+        self.intensities = self.intensities[sorted_idx]
 
+
+class Measurement:
+    def __init__(self, spectra: List[Spectrum], metadata: Optional[Union[Dict[str, Any], Metadata]] = None, profile: Optional[Profile] = None) -> None:
+        # TODO: check wavenumbers are consistent across spectra
+        # TODO: percolate metadata to each spectrum
+        # TODO: add index to each spectrum for unique identifier and match with profile positions
+        # TODO: check number of positions in profile matches n_spectra
+        self.spectra: List[Spectrum] = spectra
+        self.metadata: Metadata = Metadata.as_metadata(metadata) or None
+        self.profile: Profile = profile or None
+
+    def __len__(self) -> int:
+        return self.n_spectra
+
+    @property
+    def metadata(self) -> Metadata:
+        return self._metadata
+    
+    @metadata.setter
+    def metadata(self, metadata: Union[Dict[Any, str], Metadata]) -> None:
+        self._metadata: Metadata = Metadata.as_metadata(metadata)
+
+    @property
+    def profile(self) -> Profile:
+        return self._profile
+    
+    @profile.setter
+    def profile(self, profile: Profile) -> None:
+        self._profile: Profile = profile
+
+    @property
+    def n_spectra(self) -> int:
+        return len(self.spectra)
+    
+    @property
+    def intensities(self) -> np.ndarray:
+        return np.asarray([s.intensities for s in self.spectra])
+    
 # class Measurement:
-#     def __init__(self, spectra: List[Spectrum], metadata: Optional[dict[str, Any]] = None):
-#         self.spectra: List[Spectrum] = spectra
-#         self._metadata: Metadata = Metadata(metadata)
-
-
-# class Dataset:
 #     """
-#     Represents a collection of spectra and their associated labels.
+#     Represents a single measurement (e.g., Raman map, line scan, or point set).
+
+#     TODO: convenience constructor form array
+#     TODO: default constructor from list of spectrum
+#     TODO: update intensities when spectra are updated?
 
 #     Attributes
 #     ----------
-#     spectra : List[Spectrum]
-#         List of Spectrum objects.
-#     labels : Optional[List[Any]]
-#         Optional list of sample labels (e.g., clinical class, bacterial species).
-#     metadata : dict
-#         Dataset-level metadata.
+#     wavenumbers : np.ndarray
+#         Shared wavenumber axis for all spectra.
+#     intensities : np.ndarray
+#         2D array (n_spectra, n_points) of intensities.
+#     metadata : dict, or Metadata, optional
+#         Metadata describing the measurement.
+#     profile : Profile, optional
+#         Spatial profile describing the measurement layout.
 #     """
+#     def __init__(
+#             self,
+#             wavenumbers: np.ndarray,
+#             intensities: np.ndarray,
+#             metadata: Optional[Union[Dict[str, Any], Metadata]] = None,
+#             profile: Optional[Profile] = None) -> None:
+#         w: np.ndarray = np.asarray(wavenumbers)
+#         i: np.ndarray = np.asarray(intensities)
+        
+#         self._wavenumbers: np.ndarray = w
+#         self._intensities: np.ndarray = i #TODO: intensities and wavenumbers must have same length in final dimension
+#         self._metadata: Metadata = Metadata.as_metadata(metadata)
+#         self._profile: Profile = profile #TODO: n_spectra in profile must match n_spectra in Measurement
+#         self._spectra: List[Spectrum] = []
 
-#     def __init__(self, spectra: List[Spectrum], labels: Optional[List[Any]] = None, metadata: Optional[dict] = None):
-#         pass
+#         # Percolate metadata to Spectrum objects
+#         for i in range(self.n_spectra):
+#             spec_meta: Metadata = self._derive_spectrum_metadata(i)
+#             spectrum: Spectrum = Spectrum(self._wavenumbers, self._intensities[i], metadata=spec_meta)
+#             self._spectra.append(spectrum)
+
+#         def __repr__(self) -> str:
+#             return f"Measurement(wavenumbers={self._wavenumbers.shape}, intensities={intensities.shape})"
+        
+#         def _derive_spectrum_metadata(self, index: int) -> Metadata:
+#             meta: Metadata = self._metadata.to_dict()
+#             meta.index = index
+#             if self._profile and self._profile.positions is not None:
+#                 if index < len(self.profile.positions):
+#                     meta.position = tuple(self._profile.positions[index])
+#             return Metadata(meta)
+        
+#         @classmethod
+#         def from_array(cls, wavenumbers: np.ndarray, intensities: np.ndarray, metadata: Optional[Dict[str, Any]] = None, profile: Optional[Profile] = None) -> Self:
+#             return cls(wavenumbers=wavenumbers, intensities=intensities, metadata=Metadata(metadata), profile=Profile)
+
+#         @property
+#         def n_spectra(self) -> int:
+#             return self._intensities.shape[0]
+
+
+class Dataset:
+    """
+    Represents a collection of spectra and their associated labels.
+
+    Attributes
+    ----------
+    spectra : List[Spectrum]
+        List of Spectrum objects.
+    labels : Optional[List[Any]]
+        Optional list of sample labels (e.g., clinical class, bacterial species).
+    metadata : dict
+        Dataset-level metadata.
+    """
+
+    def __init__(self, spectra: List[Spectrum], labels: Optional[List[Any]] = None, metadata: Optional[dict] = None):
+        pass
 
 
 # ---------------------------------------------------------------------------
