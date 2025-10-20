@@ -20,10 +20,22 @@ class Spectrum:
         w: np.ndarray = np.array(wavenumbers, dtype=float)
         i: np.ndarray = np.array(intensities, dtype=float)
 
-        if w.shape != i.shape:
+        if w.ndim > 1:
+            raise ValueError(
+                f"Invalid shape: wavenumbers must be a 1D array-like. "
+                f"Got ndim={w.ndim}"
+            )
+
+        if i.ndim > 1:
+            raise ValueError(
+                f"Invalid shape: intensities must be a 1D array-like. "
+                f"Got ndim={i.ndim}"
+            )
+
+        if len(w) != len(i):
             raise ValueError(
                 f"Invalid shape: wavenumbers and intensities must have the same shape. "
-                f"Got wavenumbers.shape={w.shape} and intensities.shape={i.shape}."
+                f"Got len(wavenumbers)={len(w)} and len(intensities)={len(i)}."
             )
         
         self._wavenumbers: np.ndarray = w
