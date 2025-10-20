@@ -11,14 +11,15 @@ class Spectrum:
     """
     Represents a single Raman spectrum and its associated metadata.
 
+    Parameters
+    ----------
+        
     Attributes
     ----------
-    wavenumbers : np.ndarray
-        1D Raman shift axis array.
-    intensities : np.ndarray
-        1D measured intensity array corresponding to each wavenumber. Shape must be the same as wavenumbers.
-    metadata : dict, or Metadata, optional
-        Optional metadata such as sample ID, instrument info, or acquisition parameters.
+
+    Methods
+    ----------
+
     """
 
     def __init__(self, wavenumbers: np.ndarray, intensities: np.ndarray, metadata: Optional[Union[Dict[str, Any], Metadata]] = None) -> None:
