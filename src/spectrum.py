@@ -1,3 +1,8 @@
+"""
+Author: Yoshiki Cook
+Date: 2025-10-20
+"""
+
 from typing import Optional, Union, Self, Any, Dict, Tuple
 import numpy as np
 from metadata import Metadata
@@ -17,8 +22,8 @@ class Spectrum:
     """
 
     def __init__(self, wavenumbers: np.ndarray, intensities: np.ndarray, metadata: Optional[Union[Dict[str, Any], Metadata]] = None) -> None:
-        w: np.ndarray = np.array(wavenumbers, dtype=float)
-        i: np.ndarray = np.array(intensities, dtype=float)
+        w: np.ndarray = np.asarray(wavenumbers, dtype=float)
+        i: np.ndarray = np.asarray(intensities, dtype=float)
 
         if w.ndim > 1:
             raise ValueError(
