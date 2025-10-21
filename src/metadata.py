@@ -64,3 +64,7 @@ class Metadata:
         merged: Dict[str, Any] = self._data.copy()
         merged.update(other.to_dict())
         return Metadata(merged)
+    
+    def copy(self) -> Self:
+        """Return a deep copy of this metadata."""
+        return self.as_metadata(self._data)
