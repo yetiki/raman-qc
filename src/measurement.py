@@ -18,12 +18,14 @@ class Measurement():
     ---------
     """
     def __init__(self, spectra: List[Spectrum], positions: List[Tuple[Union[float, int], ...]], indexes: List[Tuple[int, ...]], metadata: Union[Metadata, Dict[str, Any]], percolate_metadata: bool = True) -> None:
-        self.spectra: np.ndarray = spectra
+        """Initialize a measurement containing multiple spectra."""
+        pass
     
     def __repr__(self) -> str:
         pass
 
     def __len__(self) -> int:
+        """Return the number of spectra in the measurement."""
         pass
 
     @property
@@ -47,15 +49,12 @@ class Measurement():
         pass
 
     @property
-    def n_points(self) -> int:
-        pass
-
-    @property
     def n_spectra(self) -> int:
         pass
     
     @property
     def shape(self) -> Tuple[int, ...]:
+        """Return the shape of the spatial grid if structured."""
         pass
 
     @property
@@ -69,10 +68,28 @@ class Measurement():
     @property
     def profile_type(self) -> str:
         pass
+
+    @property
+    def ndim(self):
+        """Return the number of spatial dimensions."""
+        pass
+
+    @property
+    def is_structured(self):
+        """Return True if the measurement data form a regular grid."""
+        pass
     
     @classmethod
     def from_array(self, wavenumbers: np.ndarray, intensities: np.ndarray, positions: np.ndarray = None, metadata: Union[Metadata, Dict[str, Any]] = None, percolate_metadata: bool = True) -> None:
         pass
 
     def _percolate_spectrum_metadata(self) -> None:
+        pass
+
+    def get_spectrum(self, index):
+        """Return the spectrum at the specified index."""
+        pass
+
+    def get_position(self, index):
+        """Return the spatial position corresponding to a given spectrum index."""
         pass
