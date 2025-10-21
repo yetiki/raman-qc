@@ -6,7 +6,7 @@ Date: 2025-10-20
 from typing import Optional, Literal, Union, Self, Any,List, Dict, Tuple
 import numpy as np
 
-class Profile():
+class SpatialProfile():
     """
     Represents the spatial structure of a Raman spectral measurement.
 
@@ -169,7 +169,7 @@ class Profile():
         ndim: int = idx.shape[1]
 
         # For each axis compute min..max range and build expected grid
-        ranges: List[np.ndarray, ...] = [np.arange(idx[:, i].min(), idx[:, i].max() + 1) for i in range(ndim)]
+        ranges: List = [np.arange(idx[:, i].min(), idx[:, i].max() + 1) for i in range(ndim)]
         expected: np.ndarray = np.array(np.meshgrid(*ranges, indexing="ij")).reshape(ndim, -1).T
         return set(map(tuple, expected)) == set(map(tuple, idx))
 
