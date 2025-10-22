@@ -60,6 +60,52 @@ class Spectrum:
         """Return the number of spectral points in the spectrum"""
         return len(self.wavenumbers)
     
+    def __eq__(self, other: Any) -> bool:
+        """Check equality between two Spectrum instances."""
+        if not isinstance(other, Spectrum):
+            return False
+        
+        w_equal: bool = np.array_equal(self.wavenumbers, other.wavenumbers)
+        i_equal: bool = np.array_equal(self.intensities, other.intensities)
+        m_equal: bool = self.metadata == other.metadata
+        return w_equal and i_equal and m_equal
+    
+    def __add__(self, other: Self) -> Self:
+        """Add two Spectrum instances point-wise."""
+        if not isinstance(other, Spectrum):
+            raise TypeError(
+                f"Invalid type: can only add Spectrum instances. "
+                f"Got type='{type(other)}'."
+            )
+        
+        if not np.array_equal(self.wavenumbers, other.wavenumbers):
+            raise ValueError(
+                f"Invalid wavenumbers: cannot add spectra with different wavenumbers. "
+                f"Got self.wavenumbers={self.wavenumbers} and other.wavenumbers={other.wavenumbers}."
+            )
+        
+        new_intensities: np.ndarray = self.intensities + other.intensities
+        new_metadata: Metadata = Metadata.merge(self.metadata.copy(), other.metadata.copy())
+        return Spectrum(self.wavenumbers.copy(), new_intensities, metadata=new_metadata, parent=None)
+
+    def __sub__(self, other: Self) -> Self:
+        """Subtract two Spectrum instances point-wise."""
+        if not isinstance(other, Spectrum):
+            raise TypeError(
+                f"Invalid type: can only subtract Spectrum instances. "
+                f"Got type='{type(other)}'."
+            )
+        
+        if not np.array_equal(self.wavenumbers, other.wavenumbers):
+            raise ValueError(
+                f"Invalid wavenumbers: cannot subtract spectra with different wavenumbers. "
+                f"Got self.wavenumbers={self.wavenumbers} and other.wavenumbers={other.wavenumbers}."
+            )
+        
+        new_intensities: np.ndarray = self.intensities - other.intensities
+        new_metadata: Metadata = Metadata.merge(self.metadata.copy(), other.metadata.copy())
+        return Spectrum(self.wavenumbers.copy(), new_intensities, metadata=new_metadata, parent=None)
+
     @property
     def wavenumbers(self) -> np.ndarray:
         return self._wavenumbers
