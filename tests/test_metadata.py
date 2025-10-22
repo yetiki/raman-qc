@@ -63,6 +63,10 @@ def test_as_metadata():
     metadata: Metadata = Metadata.as_metadata(Metadata({'key': 'value'}))
     assert metadata['key'] == 'value'
 
+    # from None
+    metadata: Metadata = Metadata.as_metadata(None)
+    assert isinstance(metadata, Metadata)
+
 def test_n_fields():
     metadata: Metadata = Metadata({'key1': 'value1', 'key2': 'value2'})
     assert metadata.n_fields == 2
