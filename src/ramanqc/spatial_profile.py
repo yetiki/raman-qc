@@ -10,7 +10,7 @@ class SpatialProfile():
     """
     Represents the spatial structure of a Raman spectral measurement.
 
-    The Profile class defines how individual spectra are spatially arranged,
+    The SpatialProfile class defines how individual spectra are spatially arranged,
     based on logical indexes (e.g., grid positions) and, optionally, physical
     positions (e.g., in µm). The profile shape and type is inferred automatically,
     using the provided indexes and provides spatial utility methods such as neighbour lookup.
@@ -49,18 +49,22 @@ class SpatialProfile():
 
     @property
     def shape(self) -> Tuple[int, ...]:
+        """Return the shape of the spatial grid if structured."""
         return self._shape
 
     @property
     def profile_type(self) -> str:
+        """Return the inferred profile type: 'point', 'line', 'map', 'volume', or 'unstructured'."""
         return self._profile_type
 
     @property
     def n_indexes(self) -> int:
+        """Return the number of spatial indexes in the profile."""
         return len(self._indexes)
 
     @property
     def ndim(self) -> int:
+        """Return the number of spatial dimensions in the profile."""
         idx = np.asarray(self.indexes, dtype=int)
         if idx.size == 0:
             return 0
@@ -71,13 +75,13 @@ class SpatialProfile():
 
         if idx.ndim != 2:
             raise ValueError(
-                f"Invalid indexes shape: expected a sequence of fixed-length index tuples (2D after conversion). "
+                f"Invalid indexes shape: indexes must be a sequence of fixed-length index tuples (2D after conversion). "
                 f"Got ndim={idx.ndim}."
             )
 
         if idx.shape[1] > 3:
             raise ValueError(
-                f"Invalid shape: each tuple in indexes must not exceed three spatial coordinates. "
+                f"Invalid indexes shape: each tuple in indexes must not exceed three spatial coordinates. "
                 f"Got n_coordinates={idx.shape[1]}."
             )
 
@@ -93,19 +97,19 @@ class SpatialProfile():
 
         if pos.ndim != 2:
             raise ValueError(
-                f"Invalid positions shape: expected a sequence of coordinate tuples. "
+                f"Invalid positions shape: positions must be a sequence of spatial coordinate tuples. "
                 f"Got ndim={pos.ndim}."
             )
 
         if pos.shape[1] > 3:
             raise ValueError(
-                f"Invalid shape: each tuple in positions must not exceed three spatial coordinates. "
+                f"Invalid positions shape: each tuple in positions must not exceed three spatial coordinates. "
                 f"Got n_coordinates={pos.shape[1]}."
             )
 
         if len(pos) != len(idx):
             raise ValueError(
-                f"Invalid length: positions must have same length as indexes. "
+                f"Invalid positions length: positions must have same length as indexes. "
                 f"Got len(positions)={len(pos)}, len(indexes)={len(idx)}."
             )
 
@@ -125,6 +129,7 @@ class SpatialProfile():
         return [tuple(map(float, p)) for p in pos.tolist()]
 
     def _infer_shape(self, locations: List[Tuple[Union[int, float], ...]]) -> Tuple[int, ...]:
+        """Infer the spatial shape from the provided locations (indexes or positions)."""
         lcn: np.ndarray = np.asarray(locations, dtype=float)
         if lcn.size == 0:
             return (0,)
@@ -146,6 +151,7 @@ class SpatialProfile():
         return shape
 
     def _infer_profile_type_from_indexes(self) -> str:
+        """Infer the profile type from the indexes."""
         consecutive: bool = self._check_consecutive_indexes()
 
         if not consecutive:
@@ -224,8 +230,8 @@ class SpatialProfile():
         else:
             return self._get_neighbours_by_index(location, mode)
 
-    def _get_neighbours_by_index(self, index: Tuple[int, ...], mode: Literal["2-connectivity", "4-connectivity", "6-connectivity", "8-connectivity", "26-connectivity", "kNN"]) -> List[Tuple[int, ...]]:
-        """Neighbour detection for regular grid indices."""
+    def _get_neighbours_by_index(self, index: Tuple[int, ...], mode: Literal['2-connectivity', '4-connectivity', '6-connectivity', '8-connectivity', '26-connectivity', 'kNN']) -> List[Tuple[int, ...]]:
+        """Detect neighbouring indices for regular grid indices."""
         idx: np.ndarray = np.asarray(index, dtype=int)
 
         if len(idx) != self.ndim:
@@ -234,14 +240,16 @@ class SpatialProfile():
             )
         if self.profile_type == "unstructured":
             raise ValueError(
-                f"Connectivity-based modes are invalid for unstructured profiles. Use 'kNN' with positions instead."
+                f"Invalid mode: connectivity-based neighbour lookup by index requires a structured profile. "
+                f"Use 'kNN' with positions instead for unstructured profiles. "
+                f"Got mode={mode} for profile_type={self.profile_type}."
             )
 
         # Validate mode for dimensionality
         valid_modes = {
-            1: ("2-connectivity",),
-            2: ("4-connectivity", "8-connectivity"),
-            3: ("6-connectivity", "26-connectivity"),
+            1: ('2-connectivity',),
+            2: ('4-connectivity', '8-connectivity'),
+            3: ('6-connectivity', '26-connectivity'),
         }
         if mode not in valid_modes.get(self.ndim, ()):
             raise ValueError(f"Mode '{mode}' invalid for {self.ndim}D profile.")
@@ -251,28 +259,28 @@ class SpatialProfile():
         existing = set(map(tuple, self.indexes))
         return [p for p in potential if p in existing]
 
-    def _get_neighbours_by_position(self, position: Tuple[float, ...], mode: Literal["2-connectivity", "4-connectivity", "6-connectivity", "8-connectivity", "26-connectivity", "kNN"], k: int = 4) -> List[Tuple[int, ...]]:
+    def _get_neighbours_by_position(self, position: Tuple[float, ...], mode: Literal['2-connectivity', '4-connectivity', '6-connectivity', '8-connectivity', '26-connectivity', 'kNN'], k: int = 4) -> List[Tuple[int, ...]]:
         """Neighbour detection using Euclidean distance between spatial positions."""
         if self.positions is None:
             raise ValueError("Positions must be defined for position-based neighbour lookup.")
 
         pos: np.ndarray = np.array(position, dtype=float)
 
-        if mode == "kNN":
+        if mode == 'kNN':
             dists = np.linalg.norm(self.positions - pos, axis=1)
             nearest_idx = np.argsort(dists)
             nearest_idx = nearest_idx[1:k+1]  # exclude self
             return [tuple(self.indexes[i]) for i in nearest_idx]
 
         # All other connectivity modes require a structured grid
-        if self.profile_type == "unstructured":
+        if self.profile_type == 'unstructured':
             raise ValueError(f"Mode '{mode}' invalid for unstructured profiles (use 'kNN').")
 
         # Validate mode for dimensionality
         valid_modes = {
-            1: ("2-connectivity",),
-            2: ("4-connectivity", "8-connectivity"),
-            3: ("6-connectivity", "26-connectivity"),
+            1: ('2-connectivity',),
+            2: ('4-connectivity', '8-connectivity'),
+            3: ('6-connectivity', '26-connectivity'),
         }
         if mode not in valid_modes.get(self.ndim, ()):
             raise ValueError(f"Mode '{mode}' invalid for {self.ndim}D profile.")
@@ -281,25 +289,25 @@ class SpatialProfile():
         nearest_index = self.get_index(pos)
         return self._get_neighbours_by_index(nearest_index, mode)
 
-    def _connectivity_deltas(self, mode: Literal["2-connectivity", "4-connectivity", "6-connectivity", "8-connectivity", "26-connectivity"]) -> np.ndarray:
+    def _connectivity_deltas(self, mode: Literal['2-connectivity', '4-connectivity', '6-connectivity', '8-connectivity', '26-connectivity']) -> np.ndarray:
         """Return offset patterns for supported connectivity modes."""
         if self.ndim == 1:
-            if mode != "2-connectivity":
+            if mode != '2-connectivity':
                 raise ValueError(f"Mode '{mode}' invalid for 1D profile.")
             return np.array([(-1,), (1,)])
 
         if self.ndim == 2:
-            if mode == "8-connectivity":
+            if mode == '8-connectivity':
                 return np.array([
                     (-1, -1), (-1, 0), (-1, 1),
                     (0, -1),            (0, 1),
                     (1, -1),  (1, 0),   (1, 1),
                 ])
-            if mode == "4-connectivity":
+            if mode == '4-connectivity':
                 return np.array([(-1, 0), (1, 0), (0, -1), (0, 1)])
 
         if self.ndim == 3:
-            if mode == "26-connectivity":
+            if mode == '26-connectivity':
                 return np.array([
                     (x, y, z)
                     for x in (-1, 0, 1)
@@ -307,7 +315,7 @@ class SpatialProfile():
                     for z in (-1, 0, 1)
                     if not (x == y == z == 0)
                 ])
-            if mode == "6-connectivity":
+            if mode == '6-connectivity':
                 return np.array([
                     (-1, 0, 0), (1, 0, 0),
                     (0, -1, 0), (0, 1, 0),

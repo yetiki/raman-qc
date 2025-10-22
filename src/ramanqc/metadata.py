@@ -3,7 +3,7 @@ Author: Yoshiki Cook
 Date: 2025-10-20
 """
 
-from typing import Optional, Union, Self, Any, Dict
+from typing import Optional, Union, Self, Any, Dict, List, Tuple
 
 class Metadata:
     """
@@ -17,11 +17,12 @@ class Metadata:
 
     Examples
     --------
-    >>> metadata = Metadata({'valid_key': 1, 'invalid_key_%': 50})
-    >>> metadata.valid_key  # Works: 1
-    >>> metadata['valid_key']  # Works: 1
-    >>> metadata['invalid_key_%']  # Works: 50
-    >>> metadata.invalid_key_%  # Raises SyntaxError - invalid identifier
+    >>> metadata = Metadata({'valid_key': 1, 'invalid_attribute_key_%': 2})
+    >>> metadata.valid_key  # attribute-style access works: 1
+    >>> metadata['valid_key']  # dict-style access works: 1
+    >>> metadata['invalid_attribute_key_%']  # dict-style access works: 2
+    # metadata.invalid_attribute_key_%  # attribute-style access won't work - SyntaxError: invalid syntax
+    >>> metadata.nonexistent_key  # Raises AttributeError - key not found
 
     Parameters
     ----------
@@ -37,7 +38,12 @@ class Metadata:
         self._data: Dict[str, Any] = data or {}
 
     def __getitem__(self, key) -> Any:
-        return self._data.get(key, None)
+        if key in self._data:
+            return self._data.get(key)
+        raise KeyError(
+            f"Invalid field: metadata field must be in {list(self._data.keys())}. ",
+            f"Got field='{key}'."
+        )
 
     def __setitem__(self, key, value) -> None:
         self._data[key] = value
@@ -47,7 +53,8 @@ class Metadata:
             return self._data[key]
         raise AttributeError(
             f"Invalid field: metadata field must be in {list(self._data.keys())}. ",
-            f"Got field='{key}'.")
+            f"Got field='{key}'."
+            )
 
     def __setattr__(self, key, value) -> None:
         if key == "_data":
@@ -64,6 +71,21 @@ class Metadata:
         if not isinstance(other, cls):
             return cls(other)
         return other
+    
+    @property
+    def keys(self) -> List[str]:
+        """Return the list of metadata keys."""
+        return list(self._data.keys())
+    
+    @property
+    def values(self) -> List[Any]:
+        """Return the list of metadata values."""
+        return list(self._data.values())
+    
+    @property
+    def items(self) -> List[Tuple[str, Any]]:
+        """Return the list of metadata items as (key, value) tuples."""
+        return list(self._data.items())
 
     def to_dict(self) -> Dict[str, Any]:
         """Return the metadata as a dictionary."""

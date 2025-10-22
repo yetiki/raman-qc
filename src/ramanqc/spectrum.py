@@ -25,7 +25,6 @@ class Spectrum:
     """
 
     def __init__(self, wavenumbers: np.ndarray, intensities: np.ndarray, metadata: Optional[Union[Dict[str, Any], Metadata]] = None, parent: Optional[Measurement] = None) -> None:
-        """Initialize a single spectral measurement."""
         w: np.ndarray = np.asarray(wavenumbers, dtype=float)
         i: np.ndarray = np.asarray(intensities, dtype=float)
 
@@ -79,7 +78,7 @@ class Spectrum:
 
     @property
     def index(self) -> Optional[int]:
-        """Return the index of this Spectrum within its parent Measurement."""
+        """Return the index of the spectrum within its parent Measurement."""
         if self._parent is None:
             return None
         
@@ -90,6 +89,7 @@ class Spectrum:
     
     @property
     def position(self) -> Optional[Tuple[float, ...]]:
+        """Return the positions of the spectrum within its parent Measurement."""
         if self._parent is None or self._parent.positions is None:
             return None
         
@@ -99,17 +99,21 @@ class Spectrum:
         
     @property
     def n_points(self) -> int:
+        """Return the number of spectral points in the spectrum."""
         return len(self._wavenumbers)
 
     @property
     def resolution(self) -> int:
+        """Return the spectral resolution of the spectrum."""
         return abs(np.diff(self._wavenumbers)).max()
     
     @property
     def wavenumber_range(self) -> Tuple[int, int]:
+        """Return the wavenumber range of the spectrum as (min, max)."""
         return self._wavenumbers.min(), self._wavenumbers.max()
 
     def _sort(self, reverse=False) -> None:
+        """Sort the spectrum by wavenumber in ascending or descending order."""
         sorted_idx: np.ndarray = self._wavenumbers.argsort()
 
         if reverse:
