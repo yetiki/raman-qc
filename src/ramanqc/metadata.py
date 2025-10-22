@@ -1,6 +1,8 @@
 """
 Author: Yoshiki Cook
 Date: 2025-10-20
+
+Updated: 2025-10-22
 """
 
 from typing import Optional, Union, Self, Any, Dict, List, Tuple
@@ -65,6 +67,10 @@ class Metadata:
     def __repr__(self) -> str:
         return f"Metadata(data={self._data})"
     
+    def __len__(self) -> int:
+        """Return the number of metadata fields."""
+        return len(self._data)
+    
     @classmethod
     def as_metadata(cls, other: Union[Dict[str, Any], Self]) -> Self:
         """Convert a dictionary to a Metadata instance if needed."""
@@ -86,6 +92,11 @@ class Metadata:
     def items(self) -> List[Tuple[str, Any]]:
         """Return the list of metadata items as (key, value) tuples."""
         return list(self._data.items())
+    
+    @property
+    def n_fields(self) -> int:
+        """Return the number of metadata fields."""
+        return len(self._data)
 
     def to_dict(self) -> Dict[str, Any]:
         """Return the metadata as a dictionary."""

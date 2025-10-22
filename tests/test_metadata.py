@@ -4,7 +4,7 @@ Date: 2025-10-22
 """
 
 import pytest
-from typing import Optional, Union, Self, Any, Dict
+from typing import Any, Dict
 from ramanqc.metadata import Metadata
 
 def test_dict_style_access():
@@ -62,6 +62,10 @@ def test_as_metadata():
     # from Metadata
     metadata: Metadata = Metadata.as_metadata(Metadata({'key': 'value'}))
     assert metadata['key'] == 'value'
+
+def test_n_fields():
+    metadata: Metadata = Metadata({'key1': 'value1', 'key2': 'value2'})
+    assert metadata.n_fields == 2
 
 def test_update():
     metadata: Metadata = Metadata({'key': 'value'})
