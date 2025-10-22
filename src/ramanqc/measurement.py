@@ -1,3 +1,10 @@
+"""
+Author: Yoshiki Cook
+Date: 2025-10-20
+
+Updated: 2025-10-22
+"""
+
 from typing import Optional, Union, Self, Any,List, Dict, Tuple
 import numpy as np
 from metadata import Metadata
