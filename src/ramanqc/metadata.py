@@ -97,6 +97,10 @@ class Metadata:
     def n_fields(self) -> int:
         """Return the number of metadata fields."""
         return len(self._data)
+    
+    def get(self, key: str, default: Any = None):
+        """Return the value of the spcified field if it exits else returns a default value."""
+        return self._data.get(key, default)
 
     def to_dict(self) -> Dict[str, Any]:
         """Return the metadata as a dictionary."""

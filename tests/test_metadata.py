@@ -13,14 +13,16 @@ def test_dict_style_access():
         "str_value": "str",
         "int_value": 1,
         "float_value": 0.1,
-        "invalid_attribute_field_%": 0.1,
+        "invalid_attribute_field_1_%": 1,
+        "invalid attribute field 2": 2,
     }
     metadata: Metadata = Metadata(data)
 
     assert metadata['str_value'] == 'str'
     assert metadata['int_value'] == 1
     assert metadata['float_value'] == 0.1
-    assert metadata['invalid_attribute_field_%'] == 0.1
+    assert metadata['invalid_attribute_field_1_%'] == 1
+    assert metadata['invalid attribute field 2'] == 2
 
     with pytest.raises(KeyError):
         _ = metadata['nonexistent_field']
@@ -31,7 +33,6 @@ def test_attribute_style_access():
         "str_value": "str",
         "int_value": 1,
         "float_value": 0.1,
-        "invalid_attribute_field_%": 0.1,
     }
     metadata: Metadata = Metadata(data)
 
@@ -47,6 +48,24 @@ def test_set_item():
     metadata: Metadata = Metadata()
     metadata['new_key'] = 'new_value'
     assert metadata['new_key'] == 'new_value'
+
+def test_get():
+    """Test accessing metadata values without KeyError."""
+    data : Dict[str, Any] = {
+        "str_value": "str",
+        "int_value": 1,
+        "float_value": 0.1,
+    }
+    metadata: Metadata = Metadata(data)
+
+    assert metadata.get('str_value') == 'str'
+    assert metadata.get('int_value') == 1
+    assert metadata.get('float_value') == 0.1
+    assert metadata.get('invalid_attribute_field_1_%') == 1
+    assert metadata.get('invalid attribute field 2') == 2
+
+    assert metadata.get('nonexistent_field', None) == None
+    assert metadata.get('nonexistent_field', 'default_value') == 'default_value'
 
 def test_to_dict():
     """Test converting Metadata to a dictionary."""
