@@ -26,7 +26,12 @@ class SpatialProfile():
     Methods
     ----------
     """
-    def __init__(self, grid_indices: List[Tuple[int, ...]], positions: Optional[List[Tuple[float, ...]]] = None, validate_positions: bool = True) -> None:
+    def __init__(
+            self,
+            grid_indices: List[Tuple[int, ...]],
+            positions: Optional[List[Tuple[float, ...]]] = None,
+            validate_positions: bool = True) -> None:
+        
         self._grid_indices: List[Tuple[int, ...]] = self._set_grid_indices(grid_indices)
         self._shape: Tuple[int, ...] = self._infer_shape(grid_indices)
         self._profile_type: str = self._infer_profile_type()
@@ -55,14 +60,14 @@ class SpatialProfile():
         return self._shape
 
     @property
-    def profile_type(self) -> str:
+    def profile_type(self) -> Literal['point', 'line', 'map', 'volume', 'unstructured']:
         """Return the inferred profile type: 'point', 'line', 'map', 'volume', or 'unstructured'."""
         return self._profile_type
 
     @property
     def n_points(self) -> int:
-        """Return the number of grid/position points in the profile."""
-        return len(self._grid_indices)
+        """Return the number of grid / position points in the profile."""
+        return sum(self.shape)
     
     @property
     def ndim(self) -> int:
@@ -159,6 +164,9 @@ class SpatialProfile():
         n_lcn: int = len(lcn)
         ndim: int = lcn.shape[1]
 
+        if n_lcn == 1:
+            return (1,)
+
         # Count unique coordinate values along each axis
         unique_counts: List[int] = [len(np.unique(lcn[:, i])) for i in range(ndim)]
 
@@ -177,15 +185,20 @@ class SpatialProfile():
 
     def _infer_profile_type(self) -> str:
         """Infer the profile type from the grid_indices."""
+        if self.n_points == 1:
+            return 'point'
+        
         consecutive: bool = self._check_consecutive_grid_indices()
         if not consecutive:
             return 'unstructured'
+        
+        true_ndim: int = sum(s != 1 for s in self.shape)
 
-        if self.ndim == 1:
-            return 'line' if self.shape[0] > 1 else 'point'
-        elif self.ndim == 2:
+        if true_ndim == 1:
+            return 'line'
+        elif true_ndim == 2:
             return 'map'
-        elif self.ndim == 3:
+        elif true_ndim == 3:
             return 'volume'
         else:
             return 'unstructured'
