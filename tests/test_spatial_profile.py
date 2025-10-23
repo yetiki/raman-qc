@@ -32,9 +32,9 @@ def test_init():
 def test_init_with_positions():
     # valid initialization
     profile: SpatialProfile = SpatialProfile(grid_indices=[(0, 0), (0, 1), (1, 0), (1, 1)],
-                                             positions=[(0.0, 0.0), (1.0, 1.0), (2.0, 2.0), (3.0, 3.0)])
+                                             positions=[(0.0, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0)])
     assert profile.grid_indices == [(0, 0), (0, 1), (1, 0), (1, 1)]
-    assert profile.positions == [(0.0, 0.0), (1.0, 1.0), (2.0, 2.0), (3.0, 3.0)]
+    assert profile.positions == [(0.0, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0)]
 
     # inconsistent position dimensions
     with pytest.raises(ValueError):
@@ -44,9 +44,9 @@ def test_init_with_positions():
     with pytest.raises(ValueError):
         _ = SpatialProfile(grid_indices=[(0, 0), (1, 1)], positions=[(0.0, 0.0), (0.0, 0.0)])
 
-    # mismatched lengths with grid_indices
+    # mismatched shape with grid_indices
     with pytest.raises(ValueError):
-        _ = SpatialProfile(grid_indices=[(0, 0), (1, 1)], positions=[(0.0, 0.0)])
+        _ = SpatialProfile(grid_indices=[(0, 0), (1, 1)], positions=[(0.0, 1.0)])
 
     # too many dimensions
     with pytest.raises(ValueError):
