@@ -31,7 +31,7 @@ class Spectrum:
             wavenumbers: np.ndarray,
             intensities: np.ndarray,
             metadata: Optional[Union[Dict[str, Any], Metadata]] = None,
-            measurement: Optional['Measurement'] = None) -> None:
+            parent: Optional['Measurement'] = None) -> None:
         
         w: np.ndarray = np.asarray(wavenumbers, dtype=float)
         i: np.ndarray = np.asarray(intensities, dtype=float)
@@ -58,13 +58,13 @@ class Spectrum:
         self._intensities: np.ndarray = i
         self._sort()
         self._metadata: Metadata = Metadata.as_metadata(metadata) or None
-        self._measurement = weakref.ref(measurement) if measurement is not None else None
+        self._parent = weakref.ref(parent) if parent is not None else None
 
     def __repr__(self) -> str:
         return f"Spectrum(wavenumbers=array(shape={self._wavenumbers.shape}), intensities=array(shape={self._intensities.shape}), metadata={self._metadata})"
 
     def __len__(self) -> int:
-        """Return the number of spectral points in the spectrum"""
+        """Return the number of (wavenumber, intensity) points in the spectrum."""
         return len(self._wavenumbers)
     
     def __eq__(self, other: Any) -> bool:
@@ -78,7 +78,7 @@ class Spectrum:
         return w_equal and i_equal and m_equal
     
     def __add__(self, other: Self) -> Self:
-        """Add two Spectrum instances point-wise."""
+        """Pointwise addition of two Spectrum instances."""
         if not isinstance(other, Spectrum):
             raise TypeError(
                 f"Invalid type: can only add Spectrum instances. "
@@ -93,10 +93,10 @@ class Spectrum:
         
         new_intensities: np.ndarray = self._intensities + other.intensities
         new_metadata: Metadata = Metadata.merge(self._metadata.copy(), other.metadata.copy())
-        return Spectrum(self._wavenumbers.copy(), new_intensities, metadata=new_metadata, measurement=None)
+        return Spectrum(self._wavenumbers.copy(), new_intensities, metadata=new_metadata, parent=None)
 
     def __sub__(self, other: Self) -> Self:
-        """Subtract two Spectrum instances point-wise."""
+        """Pointwise subtraction of two Spectrum instances."""
         if not isinstance(other, Spectrum):
             raise TypeError(
                 f"Invalid type: can only subtract Spectrum instances. "
@@ -111,19 +111,19 @@ class Spectrum:
         
         new_intensities: np.ndarray = self._intensities - other.intensities
         new_metadata: Metadata = Metadata.merge(self._metadata.copy(), other.metadata.copy())
-        return Spectrum(self._wavenumbers.copy(), new_intensities, metadata=new_metadata, measurement=None)
+        return Spectrum(self._wavenumbers.copy(), new_intensities, metadata=new_metadata, parent=None)
 
     @property
     def wavenumbers(self) -> np.ndarray:
-        return self._wavenumbers
+        return self._wavenumbers.copy()
     
     @property
     def intensities(self) -> np.ndarray:
-        return self._intensities
+        return self._intensities.copy()
     
     @property
     def metadata(self) -> Metadata:
-        return self._metadata
+        return self._metadata.copy()
     
     @metadata.setter
     def metadata(self, metadata: Union[Dict[str, Any], Metadata]) -> None:
@@ -131,32 +131,32 @@ class Spectrum:
 
     @property
     def index(self) -> Optional[int]:   
-        """Return the list index of the spectrum within its parent Measurement."""
-        if self._measurement is None:
+        """Return the index of the spectrum within its parent Measurement."""
+        if self._parent is None:
             return None
         
-        for i, s in enumerate(self._measurement.spectra):
+        for i, s in enumerate(self._parent.spectra):
             if s is self:
                 return i
         return None
 
     @property
-    def relative_index(self) -> Optional[int]:
-        """Return the relative spatial index of the spectrum within its parent Measurement."""
-        if self._measurement is None or self.index is None:
+    def grid_index(self) -> Optional[int]:
+        """Return the spatial grid index of the spectrum within its parent Measurement."""
+        if self._parent is None or self.index is None or not self._parent.is_structured:
             return None
-        return self._measurement.relative_indexes[self.index]
+        return self._parent.grid_indexes[self.index]
     
     @property
-    def absolute_position(self) -> Optional[Tuple[float, ...]]:
-        """Return the absolute position of the spectrum within its parent Measurement."""
-        if self._measurement is None or self.index is None or self._measurement.positions is None:
+    def position(self) -> Optional[Tuple[float, ...]]:
+        """Return the spatial position of the spectrum within its parent Measurement."""
+        if self._parent is None or self.index is None or not self._parent.is_structured or self._parent.positions is None:
             return None
-        return self._measurement.positions[self.index]
+        return self._parent.positions[self.index]
         
     @property
     def n_points(self) -> int:
-        """Return the number of spectral points in the spectrum."""
+        """Return the number of (wavenumber, intensity) points in the spectrum."""
         return len(self._wavenumbers)
 
     @property
@@ -169,8 +169,15 @@ class Spectrum:
         """Return the wavenumber range of the spectrum as (min, max)."""
         return self._wavenumbers.min(), self._wavenumbers.max()
 
+    @property
+    def parent(self) -> Optional[Measurement]:
+        """Return the parent Measurement instance if available."""
+        if self._parent is None:
+            return None
+        return self._parent()
+    
     def _sort(self, reverse=False) -> None:
-        """Sort the spectrum by wavenumber in ascending or descending order."""
+        """Sort the wavenumbers and intesities by wavenumber in ascending or descending order."""
         sorted_idx: np.ndarray = self._wavenumbers.argsort()
 
         if reverse:
@@ -179,13 +186,6 @@ class Spectrum:
         self._wavenumbers = self._wavenumbers[sorted_idx]
         self._intensities = self._intensities[sorted_idx]
 
-    @property
-    def measurement(self) -> Optional[Measurement]:
-        """Return the parent Measurement instance if available."""
-        if self._measurement is None:
-            return None
-        return self._measurement()
-
     def copy(self):
         """Return a deep copy of the spectrum."""
-        return Spectrum(self.wavenumbers.copy(), self.intensities.copy(), metadata=self.metadata.copy(), measurement=None)
+        return Spectrum(self.wavenumbers.copy(), self.intensities.copy(), metadata=self.metadata.copy(), parent=None)
