@@ -36,7 +36,9 @@ class Metadata:
     _data : Dict[str, Any]
         A dictionary containing metadata fields and values.
     """
-    def __init__(self, data: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self,
+                 data: Optional[Dict[str, Any]] = None) -> None:
+        
         self._data: Dict[str, Any] = data or {}
 
     def __getitem__(self, key) -> Any:
