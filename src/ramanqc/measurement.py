@@ -24,8 +24,23 @@ class Measurement():
     Methods
     ---------
     """
-    def __init__(self, spectra: List[Spectrum], positions: List[Tuple[Union[float, int], ...]], indexes: List[Tuple[int, ...]], metadata: Union[Metadata, Dict[str, Any]], percolate_metadata: bool = True) -> None:
+    def __init__(
+            self,
+            spectra: List[Spectrum],
+            positions: List[Tuple[Union[float, int], ...]],
+            grid_indices: List[Tuple[int, ...]] = None,
+            metadata: Union[Metadata, Dict[str, Any]] = None,
+            percolate_metadata: bool = True) -> None:
         """Initialize a measurement containing multiple spectra."""
+
+        for i, item in enumerate(spectra):
+            if not isinstance(item, Spectrum):
+                raise TypeError(
+                    f"Invalid item type: Each item in spectra must be a Spectrum. "
+                    f"Got type='{type(item).__name__}' with value={item} at index={i}."
+                )
+
+        self._spectra: List[Spectrum] = spectra
         pass
     
     def __repr__(self) -> str:
@@ -58,7 +73,7 @@ class Measurement():
     @property
     def n_spectra(self) -> int:
         pass
-    
+  
     @property
     def shape(self) -> Tuple[int, ...]:
         """Return the shape of the spatial grid if structured."""
@@ -91,6 +106,9 @@ class Measurement():
         pass
 
     def _percolate_spectrum_metadata(self) -> None:
+        pass
+
+    def is_structured(self) -> bool:
         pass
 
     def get_spectrum(self, index):
