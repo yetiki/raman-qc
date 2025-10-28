@@ -364,12 +364,12 @@ class SpatialProfile:
             if self._positions is None:
                 return f"SpatialProfile(grid_indices=None, positions=None)"
             else:
-                return f"SpatialProfile(grid_indices=None, positions=(shape={...}, ndim={...}))"
+                return f"SpatialProfile(grid_indices=None, positions=(shape={self._shape}, ndim={self._ndim}))"
         else:
             if self._positions is None:
-                return f"SpatialProfile(grid_indices=(shape={...}, ndim={...}), positions=None)"
+                return f"SpatialProfile(grid_indices=(shape={self._shape}, ndim={self._ndim}), positions=None)"
             else:
-                return f"SpatialProfile(grid_indices=(shape={...}, ndim={...}), positions=(shape={...}, ndim={...}))"
+                return f"SpatialProfile(grid_indices=(shape={self._shape}, ndim={self._grid_indices.shape[1]}), positions=(shape={self._shape}, ndim={self._positions.shape[1]}))"
 
     def __len__(self) -> int:
         """Return the number of spectra (i.e. number of grid points or positions)."""
@@ -442,105 +442,136 @@ class SpatialProfile:
         if self._positions is None or index not in range(self._n_points):
             return default
         return self._positions[index]
-
+    
     def get_neighbours(
-        self,
-        index: int,
-        mode: Literal['2-connectivity', '4-connectivity', '6-connectivity', '8-connectivity', '26-connectivity', 'kNN'] = '4-connectivity',
-        use_positions: bool = False,
-        k: int = 4,
-        ) -> List[int]:
-        """Return neighbouring spectra indices based on grid or spatial proximity."""
+            self,
+            index: int,
+            use_positions: bool = False,
+            mode: Literal['grid', 'full'] = None,
+            k: int = None,
+    ) -> List[int]:
+        """Return indices of neighbouring spectra based on grid or spatial proximity."""
         if self._n_points == 1:
-            raise ValueError(
-                f"Invalid profile_type:Neighbour lookup not applicable for single-point profiles."
-                f"Got profile_type='{self._profile_type}'."
-                )
+            return None
         
-        if index < 0 or index >= len(self._grid_indices):
+        if index < 0 or index >= self._n_points - 1:
             raise IndexError(
                 f"Invalid index: index must be within the range of profile indices. "
                 f"Got index={index}, valid range is [0, {self._n_points - 1}]."
             )
         
+        if use_positions and mode is not None:
+            raise ValueError(
+                f"Invalid mode: mode only used when use_positions is False. "
+                f"Got use_positions={use_positions} and mode={mode}"
+            )
+        
+        if not use_positions and k is not None:
+            raise ValueError(
+                f"Invalid k: k only used when use_positions is True. "
+                f"Got use_positions={use_positions} and k={k}"
+            )
+                       
         if use_positions:
             position: np.ndarray = self._positions[index]
-            return self._get_neighbours_by_position(position, mode, k=k)
+            k: int = k or 4
+            return self._get_neighbours_by_position(position, k=k)
         else:
             grid_index: np.ndarray = self._grid_indices[index]
+            mode: str = mode or 'grid'
             return self._get_neighbours_by_grid_index(grid_index, mode)
         
     def _get_neighbours_by_grid_index(
-        self,
-        grid_index: np.ndarray,
-        mode: Literal['2-connectivity', '4-connectivity', '6-connectivity', '8-connectivity', '26-connectivity'],
-        ) -> List[np.ndarray]:
+            self,
+            grid_index: np.ndarray,
+            mode: Literal['grid', 'full'] = 'grid'
+    ) -> np.ndarray:
         """Neighbour detection for regular grid indices."""
+        VALID_MODES: List[str] = ['grid', 'full']
+        if mode not in VALID_MODES:
+            raise ValueError(
+                f"Invalid mode value: mode must be in {VALID_MODES}. "
+                f"Got mode={mode}"
+            )
+        
         if grid_index not in self._grid_indices:
             raise ValueError(
                 f"Invalid grid_index: grid_index must be in grid_indices. "
                 f"Got grid_index={grid_index} and grid_indices={self._grid_indices}."
             )
         
-        # validate mode for dimensionality
-        valid_modes = {
-            1: ('2-connectivity',),
-            2: ('4-connectivity', '8-connectivity'),
-            3: ('6-connectivity', '26-connectivity'),
-        }
-        if mode not in valid_modes.get(self.ndim, ()):
-            raise ValueError(
-                f"Invalid mode: mode must be valid for profile dimensionality. "
-                f"Use {valid_modes.get(self.ndim, [])} for {self.ndim}D profiles. "
-                f"Got mode='{mode}' for ndim={self.ndim}."
-                )
-
+        if self._n_points == 1:
+            return None
+        
         deltas: np.ndarray = self._connectivity_deltas(mode)
-        potential: List[np.ndarray] = [list(grid_index + d) for d in deltas]
-        existing: List[np.ndarray] = [list(i) for i in self._grid_indices]
+        potential: List[np.ndarray] = [grid_index + d for d in deltas]
 
-        neighbours: np.ndarray = np.asarray([i for i in potential if i in existing])
-        sort_order: np.ndarray = np.lexsort(neighbours.T[::-1])
-        return neighbours[sort_order]
+        # map existing grid indices to their spectral indices for fast lookup
+        grid_to_idx: Dict[Tuple[int], int] = {tuple(gi): i for i, gi in enumerate(self._grid_indices)}
 
+        # collect spectral indices of existing neighbours
+        neighbour_indices: List[Tuple[int]] = [grid_to_idx[tuple(p)] for p in potential if tuple(p) in grid_to_idx]
+
+        return np.array(sorted(neighbour_indices), dtype=int)
+    
     def _get_neighbours_by_position(
         self,
         position: np.ndarray,
-        mode: Literal['2-connectivity', '4-connectivity', '6-connectivity', '8-connectivity', '26-connectivity', 'kNN'],
         k: int = 4,
-        ) -> List[np.ndarray]:
-        """Neighbour detection using Euclidean distance between spatial positions."""
-        pass
+        ) -> np.ndarray:
+        """Neighbour detection using k-nearest neighbours and Euclidean distance between spatial positions."""
+        if self._positions is None:
+            raise ValueError(
+                f"Invalid use: positions must be defined to get neighbours by position. "
+                f"Got positions=None."
+            )
+        if self._n_points == 1:
+            return None
+        
+        if not (1 <= k <= self._n_points):
+            raise ValueError(
+                f"Invalid k: k must be between 1 and number of points. "
+                f"Got k={k}, and n_points={self._n_points}."
+            )
+        
+        # Compute Euclidean distances
+        distances: np.ndarray = np.linalg.norm(self._positions - position, axis=1)
 
+        # Get indices of k nearest neighbours (excluding the point itself)
+        sorted_indices: np.ndarray = np.argsort(distances)
+        neighbour_indices: np.ndarray = sorted_indices[1 : k + 1]  # exclude self (distance=0)
+        return np.sort(neighbour_indices)
+        
     def _connectivity_deltas(
             self,
-            mode: Literal['2-connectivity', '4-connectivity', '6-connectivity', '8-connectivity', '26-connectivity']
+            mode: Literal['grid', 'full']
         ) -> np.ndarray:
         """Return offset patterns for supported connectivity modes."""
-
+        VALID_MODES: List[str] = ['grid', 'full']
+        if mode not in VALID_MODES:
+            raise ValueError(
+                f"Invalid mode value: mode must be in {VALID_MODES}. "
+                f"Got mode={mode}"
+            )
+        
         # 1d profile
         if self.ndim == 1:
-            if mode != '2-connectivity':
-                raise ValueError(
-                    f"Invalid mode value: mode must be '2-connectivity' for 1D profile. "
-                    f"Got mode={mode} and ndim={self.ndim}"
-                    )
             return np.array([[-1], [1]])
 
         # 2d profile
         if self.ndim == 2:
-            if mode == '8-connectivity':
+            if mode == 'full':
                 return np.array([
                     [-1, -1], [-1, 0], [-1, 1],
                     [0, -1],            [0, 1],
                     [1, -1],  [1, 0],   [1, 1],
                 ])
-            if mode == '4-connectivity':
+            if mode == 'grid':
                 return np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
 
         # 3d profile
         if self.ndim == 3:
-            if mode == '26-connectivity':
+            if mode == 'full':
                 return np.array([
                     [x, y, z]
                     for x in [-1, 0, 1]
@@ -548,7 +579,7 @@ class SpatialProfile:
                     for z in [-1, 0, 1]
                     if not (x == y == z == 0)
                 ])
-            if mode == '6-connectivity':
+            if mode == 'grid':
                 return np.array([
                     [-1, 0, 0], [1, 0, 0],
                     [0, -1, 0], [0, 1, 0],

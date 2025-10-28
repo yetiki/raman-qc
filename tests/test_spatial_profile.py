@@ -452,62 +452,97 @@ def test_get_position():
 
 def test_get_neighbours_by_grid_index():
     # 1d profile
-    profile: SpatialProfile = SpatialProfile(grid_indices=[[0], [1], [2], [3]])
-    assert np.all(profile.get_neighbours(1, mode='2-connectivity') == np.array([[0], [2]]))
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0], [1], [2], [3]]) 
+    assert np.all(profile._get_neighbours_by_grid_index([1]) == [0, 2])
 
     # 2d profile
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0], [0, 1], [0, 2],
                                                            [1, 0], [1, 1], [1, 2]])
-    assert np.all(profile.get_neighbours(1, mode='4-connectivity') == np.array([[0, 0], [0, 2], [1, 1]]))
-    assert np.all(profile.get_neighbours(1, mode='8-connectivity') == np.array([[0, 0], [0, 2], [1, 0], [1, 1], [1, 2]]))
+    assert np.all(profile._get_neighbours_by_grid_index([0, 1], mode='grid') == [0, 2, 4])
+    assert np.all(profile._get_neighbours_by_grid_index([0, 1], mode='full') == [0, 2, 3, 4, 5])
 
     # 3d profile
-    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0], [0, 0, 1], [0, 0, 2],
-                                                        [0, 1, 0], [0, 1, 1], [0, 1, 2],
-                                                        [0, 2, 0], [0, 2, 1], [0, 2, 2],
-                                                        [1, 0, 0], [1, 0, 1], [1, 0, 2],
-                                                        [1, 1, 0], [1, 1, 1], [1, 1, 2],
-                                                        [1, 2, 0], [1, 2, 1], [1, 2, 2],
-                                                        [2, 0, 0], [2, 0, 1], [2, 0, 2],
-                                                        [2, 1, 0], [2, 1, 1], [2, 1, 2],
-                                                        [2, 2, 0], [2, 2, 1], [2, 2, 2],
-                                                        ])
-    assert np.all(profile.get_neighbours(0, mode='6-connectivity') == np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]]))
-    assert np.all(profile.get_neighbours(10, mode='6-connectivity') == np.array([[0, 0, 1], [1, 0, 0], [1, 0, 2], [1, 1, 1], [2, 0, 1]]))
-    assert np.all(profile.get_neighbours(10, mode='26-connectivity') == np.array([[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 0], [0, 1, 1], [0, 1, 2],
-                                                                                  [1, 0, 0], [1, 0, 2], [1, 1, 0], [1, 1, 1], [1, 1, 2],
-                                                                                  [2, 0, 0], [2, 0, 1], [2, 0, 2], [2, 1, 0], [2, 1, 1], [2, 1, 2]]))
-
-def test_get_neighbours_by_positions():
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0], [0, 0, 1], [0, 0, 2],
+                                                           [0, 1, 0], [0, 1, 1], [0, 1, 2],
+                                                           [0, 2, 0], [0, 2, 1], [0, 2, 2],
+                                                           [1, 0, 0], [1, 0, 1], [1, 0, 2],
+                                                           [1, 1, 0], [1, 1, 1], [1, 1, 2],
+                                                           [1, 2, 0], [1, 2, 1], [1, 2, 2],
+                                                           [2, 0, 0], [2, 0, 1], [2, 0, 2],
+                                                           [2, 1, 0], [2, 1, 1], [2, 1, 2],
+                                                           [2, 2, 0], [2, 2, 1], [2, 2, 2],
+                                                          ])
+    assert np.all(profile._get_neighbours_by_grid_index([0, 0, 0], mode='grid') == [1, 3, 9])
+    assert np.all(profile._get_neighbours_by_grid_index([1, 0, 1], mode='grid') == [1, 9, 11, 13, 19])
+    assert np.all(profile._get_neighbours_by_grid_index([1, 0, 1], mode='full') == [0, 1, 2, 3, 4, 5, 9, 11, 12, 13, 14, 18, 19, 20, 21, 22, 23])
+    
     # single
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
+    assert profile._get_neighbours_by_grid_index([0, 0, 0]) is None
+
+    # invalid mode
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0], [1], [2], [3]])
+    with pytest.raises(ValueError):
+        profile._get_neighbours_by_grid_index([0], mode='invalid mode')
+
+def test_get_neighbours_by_position():
+    # single
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
+    assert profile._get_neighbours_by_position([0, 0, 0]) is None
 
     # line
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0], [0, 1], [0, 2],
+                                                        [1, 0], [1, 1], [1, 2]])
+    assert np.all(profile._get_neighbours_by_position([0, 1], k=3) == [0, 2, 4])
+    assert np.all(profile._get_neighbours_by_position([0, 1], k=5) == [0, 2, 3, 4, 5])
 
     # map
-
+    profile: SpatialProfile = SpatialProfile(positions = np.array([[5, 8], [5, 10], [5, 12],
+                                                                   [6, 8], [6, 10], [6, 12],
+                                                                   [7, 8], [7, 10], [7, 12],
+                                                                   ]))
+    assert np.all(profile._get_neighbours_by_position([6, 10], k=4) == [1, 3, 5, 7])
+    
     # volume
+    profile: SpatialProfile = SpatialProfile(positions=np.array([[0.1, 5.2, 3.8], [0.1, 5.2, 7.0], [0.1, 5.2, 10.2],
+                                                                 [0.1, 6.4, 3.8], [0.1, 6.4, 7.0], [0.1, 6.4, 10.2],
+                                                                 [1.6, 5.2, 3.8], [1.6, 5.2, 7.0], [1.6, 5.2, 10.2],
+                                                                 [1.6, 6.4, 3.8], [1.6, 6.4, 7.0], [1.6, 6.4, 10.2]]))
+    assert np.all(profile._get_neighbours_by_position([1.6, 5.2, 7.0], k=6) == [1, 4, 6, 8, 10, 11])
 
     # no positions
-    pass
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]])
+    with pytest.raises(ValueError):
+        profile._get_neighbours_by_position([0, 0, 0])
 
 def test_valid_get_neighbours():
-    # single
+    # use positions
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0], [0, 1], [0, 2],
+                                                        [1, 0], [1, 1], [1, 2]])
+    assert np.all(profile.get_neighbours(1, k=3, use_positions=True) == [0, 2, 4])
 
-    # line
+    # use grid indices with mode='grid'
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0], [0, 1], [0, 2],
+                                                           [1, 0], [1, 1], [1, 2]])
+    assert np.all(profile.get_neighbours(1, mode='grid') == [0, 2, 4])
 
-    # map
-
-    # volume
-
-    pass
+    # use grid indices with mode='full'
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0], [0, 1], [0, 2],
+                                                           [1, 0], [1, 1], [1, 2]])
+    assert np.all(profile.get_neighbours(1, mode='full') == [0, 2, 3, 4, 5])
 
 def test_invalid_get_neighbours():
-    # single
+    # index out of range
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0], [0, 0, 1]]) 
+    with pytest.raises(IndexError):
+        profile.get_neighbours(2)
 
-    # line
+    # use positions when mode is not None
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0], [0, 0, 1]]) 
+    with pytest.raises(ValueError):
+        profile.get_neighbours(0, mode='grid', k=1)
 
-    # map
-
-    # volume
-
-    pass
+    # not use positions and k is not None
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0], [0, 0, 1]]) 
+    with pytest.raises(ValueError):
+        profile.get_neighbours(0, mode='grid', k=1)
