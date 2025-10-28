@@ -7,6 +7,7 @@ Updated: 2025-10-22
 
 from typing import Optional, Union, Self, Any,List, Dict, Tuple, Sequence
 import numpy as np
+import weakref
 from ramanqc.metadata import Metadata
 from ramanqc.spectrum import Spectrum
 from ramanqc.spatial_profile import SpatialProfile
@@ -52,6 +53,10 @@ class Measurement():
             self._spectra = [self._spectra[i] for i in self._profile.sort_order]
 
         self._metadata: Metadata = Metadata.as_metadata(metadata)
+
+        # register parent reference in each spectrum
+        for spectrum in self._spectra:
+            spectrum._parent = weakref.ref(self)
     
     def __repr__(self) -> str:
         pass
