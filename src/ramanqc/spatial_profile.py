@@ -425,11 +425,23 @@ class SpatialProfile:
         return self._positions.copy()
 
     @property
-    def bounds(self) -> Optional[Tuple[Tuple[float, ...], Tuple[float, ...]]]:
+    def bounds(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the minimum and maximum coordinate bounds if positions are defined."""
         if self._positions is None:
             return None
         return np.min(self._positions, axis=0), np.max(self._positions, axis=0)
+    
+    def get_grid_index(self, index: int, default: Any = None) -> np.ndarray:
+        """Return the grid index for the given spectrum index."""
+        if self._grid_indices is None or index not in range(self._n_points):
+            return default
+        return self._grid_indices[index]
+    
+    def get_position(self, index: int, default: Any = None) -> np.ndarray:
+        """Return the position for the given spectrum index."""
+        if self._positions is None or index not in range(self._n_points):
+            return default
+        return self._positions[index]
 
     def get_neighbours(
         self,

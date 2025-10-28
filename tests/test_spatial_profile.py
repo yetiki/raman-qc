@@ -429,6 +429,27 @@ def test_bounds():
     assert np.all(profile.bounds[0] == np.array([0, 0, 0]))
     assert np.all(profile.bounds[1] == np.array([1, 1, 2]))
 
+def test_get_grid_index():
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
+    assert np.all(profile.get_grid_index(0) == np.array([0, 0, 0]))
+
+    # index out of bounds
+    assert profile.get_grid_index(1) is None
+    assert profile.get_grid_index(1, default='default') == 'default'
+
+def test_get_position():
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
+    assert np.all(profile.get_position(0) == np.array([0, 0, 0]))
+
+    # index out of bounds
+    assert profile.get_position(1) is None
+    assert profile.get_position(1, default='default') == 'default'
+
+    # no positions
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
+    assert profile.get_position(0) is None
+    assert profile.get_position(0, default='default') == 'default'
+
 
 def test_get_neighbours_by_grid_index():
     # single
