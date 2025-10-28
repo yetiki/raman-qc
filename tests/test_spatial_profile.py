@@ -298,29 +298,139 @@ def test_n_points():
                                                            [1, 1, 0], [1, 1, 1], [1, 1, 2],])
     assert profile.n_points == 12
 
-def test_ndim():
-    # # single
-    # profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0]]) 
-    # assert profile.ndim == 2
+def test_ndim_with_grid_indices():
+    # single
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
+    assert profile.ndim == 1
 
-    # # line
-    # profile: SpatialProfile = SpatialProfile(grid_indices=[[0], [1], [2], [3]])
-    # assert profile.ndim == 1
+    # line
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0], [1], [2], [3]])
+    assert profile.ndim == 1
 
-    # # map
-    # profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0], [0, 1], [0, 2],
-    #                                                        [1, 0], [1, 1], [1, 2]])
-    # assert profile.ndim == 2
+    # map
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0], [0, 1], [0, 2],
+                                                           [1, 0], [1, 1], [1, 2]])
+    assert profile.ndim == 2
 
-    # # volume
-    # profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0], [0, 0, 1], [0, 0, 2],
-    #                                                        [0, 1, 0], [0, 1, 1], [0, 1, 2],
-    #                                                        [1, 0, 0], [1, 0, 1], [1, 0, 2],
-    #                                                        [1, 1, 0], [1, 1, 1], [1, 1, 2],])
-    # assert profile.ndim == 3
-    pass
+    # volume
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0], [0, 0, 1], [0, 0, 2],
+                                                           [0, 1, 0], [0, 1, 1], [0, 1, 2],
+                                                           [1, 0, 0], [1, 0, 1], [1, 0, 2],
+                                                           [1, 1, 0], [1, 1, 1], [1, 1, 2],])
+    assert profile.ndim == 3
 
-def test_is_structured():
+def test_ndim_with_positions():
+    # single
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
+    assert profile.ndim == 1
+
+    # line
+    profile: SpatialProfile = SpatialProfile(positions=[[0], [1], [2], [3]])
+    assert profile.ndim == 1
+
+    # map
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0], [0, 1], [0, 2],
+                                                           [1, 0], [1, 1], [1, 2]])
+    assert profile.ndim == 2
+
+    # volume
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0], [0, 0, 1], [0, 0, 2],
+                                                           [0, 1, 0], [0, 1, 1], [0, 1, 2],
+                                                           [1, 0, 0], [1, 0, 1], [1, 0, 2],
+                                                           [1, 1, 0], [1, 1, 1], [1, 1, 2],])
+    assert profile.ndim == 3
+
+def test_is_structured_with_grid_indices():
+    # single
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
+    assert profile.is_structured
+
+    # line
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0], [1], [2], [3]])
+    assert profile.is_structured
+
+    # map
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0], [0, 1], [0, 2],
+                                                           [1, 0], [1, 1], [1, 2]])
+    assert profile.is_structured
+    
+    # volume
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0], [0, 0, 1], [0, 0, 2],
+                                                           [0, 1, 0], [0, 1, 1], [0, 1, 2],
+                                                           [1, 0, 0], [1, 0, 1], [1, 0, 2],
+                                                           [1, 1, 0], [1, 1, 1], [1, 1, 2],])
+    assert profile.is_structured
+
+def test_is_structured_with_positions():
+    # single
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
+    assert profile.is_structured
+
+    # line
+    profile: SpatialProfile = SpatialProfile(positions=[[0], [1], [2], [3]])
+    assert profile.is_structured
+
+    # map
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0], [0, 1], [0, 2],
+                                                           [1, 0], [1, 1], [1, 2]])
+    assert profile.is_structured
+    
+    # volume
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0], [0, 0, 1], [0, 0, 2],
+                                                           [0, 1, 0], [0, 1, 1], [0, 1, 2],
+                                                           [1, 0, 0], [1, 0, 1], [1, 0, 2],
+                                                           [1, 1, 0], [1, 1, 1], [1, 1, 2],])
+    assert profile.is_structured
+
+def test_has_grid_indices():
+    # no grid_indices
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
+    assert profile.has_grid_indices
+
+    # grid_indices
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
+    assert profile.has_grid_indices
+
+def test_has_positions():
+    # no positions
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
+    assert profile.has_positions is False
+
+    # positions
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
+    assert profile.has_positions
+
+def test_bounds():
+    # no positions
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
+    assert profile.bounds is None
+
+    # single
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
+    assert np.all(profile.bounds[0] == np.array([0, 0, 0]))
+    assert np.all(profile.bounds[1] == np.array([0, 0, 0]))
+
+    # line
+    profile: SpatialProfile = SpatialProfile(positions=[[0], [1], [2], [3]])
+    assert np.all(profile.bounds[0] == np.array([0]))
+    assert np.all(profile.bounds[1] == np.array([3]))
+
+    # map
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0], [0, 1], [0, 2],
+                                                           [1, 0], [1, 1], [1, 2]])
+    assert np.all(profile.bounds[0] == np.array([0, 0]))
+    assert np.all(profile.bounds[1] == np.array([1, 2]))
+    
+    # volume
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0], [0, 0, 1], [0, 0, 2],
+                                                           [0, 1, 0], [0, 1, 1], [0, 1, 2],
+                                                           [1, 0, 0], [1, 0, 1], [1, 0, 2],
+                                                           [1, 1, 0], [1, 1, 1], [1, 1, 2],])
+    assert np.all(profile.bounds[0] == np.array([0, 0, 0]))
+    assert np.all(profile.bounds[1] == np.array([1, 1, 2]))
+
+
+def test_get_neighbours_by_grid_index():
     # single
 
     # line
@@ -329,18 +439,6 @@ def test_is_structured():
 
     # volume
     pass
-
-def test_get_neighbours_by_index():
-    # single
-
-    # line
-
-    # map
-
-    # volume
-    pass
-
-
 
 def test_get_neighbours_by_positions():
     # single
@@ -351,9 +449,7 @@ def test_get_neighbours_by_positions():
 
     # volume
 
-    # Unstructured profile
-
-    # No positions
+    # no positions
     pass
 
 def test_get_neighbours():
@@ -365,5 +461,4 @@ def test_get_neighbours():
 
     # volume
 
-    # Unstructured profile
     pass

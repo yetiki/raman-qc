@@ -425,20 +425,11 @@ class SpatialProfile:
         return self._positions.copy()
 
     @property
-    def missing_indices(self) -> Optional[List[Tuple[int, ...]]]:
-        """Return a list of missing or non-consecutive grid indices, if any."""
-        pass
-
-    @property
     def bounds(self) -> Optional[Tuple[Tuple[float, ...], Tuple[float, ...]]]:
         """Return the minimum and maximum coordinate bounds if positions are defined."""
         if self._positions is None:
             return None
         return np.min(self._positions, axis=0), np.max(self._positions, axis=0)
-
-    def is_structured(self) -> bool:
-        """Check if the profile is structured (regular grid)."""
-        return self._shape is not None
 
     def get_neighbours(
         self,
