@@ -2,7 +2,7 @@
 Author: Yoshiki Cook
 Date: 2025-10-20
 
-Updated: 2025-10-22
+Updated: 2025-10-28
 """
 
 from typing import Optional, Union, Self, Any, Dict, Tuple
@@ -113,6 +113,16 @@ class Spectrum:
         new_metadata: Metadata = Metadata.merge(self._metadata.copy(), other.metadata.copy())
         return Spectrum(self._wavenumbers.copy(), new_intensities, metadata=new_metadata, parent=None)
 
+    def _sort(self, reverse=False) -> None:
+        """Sort the wavenumbers and intesities by wavenumber in ascending or descending order."""
+        sorted_idx: np.ndarray = self._wavenumbers.argsort()
+
+        if reverse:
+            sorted_idx = sorted_idx[::-1]
+
+        self._wavenumbers = self._wavenumbers[sorted_idx]
+        self._intensities = self._intensities[sorted_idx]
+
     @property
     def wavenumbers(self) -> np.ndarray:
         return self._wavenumbers.copy()
@@ -141,14 +151,14 @@ class Spectrum:
         return None
 
     @property
-    def grid_index(self) -> Optional[int]:
+    def grid_index(self) -> Optional[np.ndarray]:
         """Return the spatial grid index of the spectrum within its parent Measurement."""
         if self._parent is None or self.index is None or not self._parent.is_structured:
             return None
         return self._parent.grid_indexes[self.index]
     
     @property
-    def position(self) -> Optional[Tuple[float, ...]]:
+    def position(self) -> Optional[np.ndarray]:
         """Return the spatial position of the spectrum within its parent Measurement."""
         if self._parent is None or self.index is None or not self._parent.is_structured or self._parent.positions is None:
             return None
@@ -176,16 +186,6 @@ class Spectrum:
             return None
         return self._parent()
     
-    def _sort(self, reverse=False) -> None:
-        """Sort the wavenumbers and intesities by wavenumber in ascending or descending order."""
-        sorted_idx: np.ndarray = self._wavenumbers.argsort()
-
-        if reverse:
-            sorted_idx = sorted_idx[::-1]
-
-        self._wavenumbers = self._wavenumbers[sorted_idx]
-        self._intensities = self._intensities[sorted_idx]
-
     def copy(self):
         """Return a deep copy of the spectrum."""
         return Spectrum(self.wavenumbers.copy(), self.intensities.copy(), metadata=self.metadata.copy(), parent=None)
