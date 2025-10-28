@@ -55,6 +55,8 @@ def test_get():
         "str_value": "str",
         "int_value": 1,
         "float_value": 0.1,
+        "invalid_attribute_field_1_%": 1,
+        "invalid attribute field 2": 2,
     }
     metadata: Metadata = Metadata(data)
 
@@ -64,7 +66,7 @@ def test_get():
     assert metadata.get('invalid_attribute_field_1_%') == 1
     assert metadata.get('invalid attribute field 2') == 2
 
-    assert metadata.get('nonexistent_field', None) == None
+    assert metadata.get('nonexistent_field') == None
     assert metadata.get('nonexistent_field', 'default_value') == 'default_value'
 
 def test_to_dict():
