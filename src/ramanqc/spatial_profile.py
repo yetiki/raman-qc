@@ -51,14 +51,17 @@ class SpatialProfile:
         else:
             self._positions: None = None
 
-        # ensure at least one of grid_indices or positions is defined
-        self._validate_inputs()
+        # # ensure at least one of grid_indices or positions is defined
+        # self._validate_inputs()
 
         # ensure lengths match if both grid_indices and positions are defined
         self._validate_lengths()
 
         # ensure grid_indices and positions are sorted in ascending order
-        self._normalise_grid_order()
+        self._sort_order: np.ndarray = self._compute_sort_order()
+        if self._sort_order is not None:
+            self._grid_indices = self._grid_indices[self._sort_order] if self._grid_indices is not None else None
+            self._positions = self._positions[self._sort_order] if self._positions is not None else None
 
         # ensure no missing values
         self._validate_n_missing_points()
@@ -68,7 +71,7 @@ class SpatialProfile:
             self._validate_positions_against_indices()
 
         # infer grid_indices from positions if not defined
-        if self._grid_indices is None:
+        if self._grid_indices is None and self._positions is not None:
             inferred_indices: np.ndarray = self._infer_indices_from_positions()
 
             if inferred_indices is not None:
@@ -123,25 +126,20 @@ class SpatialProfile:
                     f"Invalid length: grid_indices and positions must have equal length. "
                     f"Got len(grid_indices)={len(self._grid_indices)} and len(positions)={len(self._positions)}"
                 )
-            
-    def _normalise_grid_order(self) -> None:
-        """Ensure grid_indices and positions are sorted in ascending order."""
+    
+    def _compute_sort_order(self) -> np.ndarray:
+        """Compute the sort order to normalise grid_indices and positions in ascending order.."""
         if self._grid_indices is None and self._positions is None:
             return None
 
         if self._grid_indices is None:
-            # sort based on lexicographic order of indices
+            # sort based on lexicographic order of positions
             sort_order: np.ndarray = np.lexsort(self._positions.T[::-1])
-            self._positions: np.ndarray = self._positions[sort_order]
-            return None
+            return sort_order
         else:
-            # sort based on lexicographic order of indices
+            # sort based on lexicographic order of grid indices
             sort_order: np.ndarray = np.lexsort(self._grid_indices.T[::-1])
-            self._grid_indices: np.ndarray = self._grid_indices[sort_order]
-
-            if self._positions is not None:
-                self._positions: np.ndarray = self._positions[sort_order]
-        return None
+            return sort_order
 
     def _validate_n_missing_points(self, tolerance: float = 1e-6) -> None:
         """Ensure there are no missing grid indices or positions."""
@@ -431,6 +429,11 @@ class SpatialProfile:
             return None
         return np.min(self._positions, axis=0), np.max(self._positions, axis=0)
     
+    @property
+    def sort_order(self) -> np.ndarray:
+        """Return the sort order used to normalise grid_indices and positions."""
+        return self._sort_order
+    
     def get_grid_index(self, index: int, default: Any = None) -> np.ndarray:
         """Return the grid index for the given spectrum index."""
         if self._grid_indices is None or index not in range(self._n_points):
@@ -451,6 +454,12 @@ class SpatialProfile:
             k: int = None,
     ) -> List[int]:
         """Return indices of neighbouring spectra based on grid or spatial proximity."""
+        if self._grid_indices is None and self._positions is None:
+            raise ValueError(
+                f"Invalid use: either grid_indices or positions must be defined to get neighbours. "
+                f"Got grid_indices=None and positions=None."
+            )
+        
         if self._n_points == 1:
             return None
         
@@ -487,6 +496,12 @@ class SpatialProfile:
             mode: Literal['grid', 'full'] = 'grid'
     ) -> np.ndarray:
         """Neighbour detection for regular grid indices."""
+        if self._grid_indices is None:
+            raise ValueError(
+                f"Invalid use: grid_indices must be defined to get neighbours by grid index. "
+                f"Got grid_indices=None."
+            )
+
         VALID_MODES: List[str] = ['grid', 'full']
         if mode not in VALID_MODES:
             raise ValueError(
@@ -553,7 +568,12 @@ class SpatialProfile:
                 f"Invalid mode value: mode must be in {VALID_MODES}. "
                 f"Got mode={mode}"
             )
-        
+        if self.ndim is None:
+            raise ValueError(
+                f"Invalid use: ndim must be defined to get connectivity deltas. "
+                f"Got ndim=None."
+            )
+
         # 1d profile
         if self.ndim == 1:
             return np.array([[-1], [1]])

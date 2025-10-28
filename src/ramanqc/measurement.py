@@ -5,11 +5,11 @@ Date: 2025-10-20
 Updated: 2025-10-22
 """
 
-from typing import Optional, Union, Self, Any,List, Dict, Tuple
+from typing import Optional, Union, Self, Any,List, Dict, Tuple, Sequence
 import numpy as np
-from metadata import Metadata
-from spectrum import Spectrum
-from profile import Profile
+from ramanqc.metadata import Metadata
+from ramanqc.spectrum import Spectrum
+from ramanqc.spatial_profile import SpatialProfile
 
 class Measurement():
     """
@@ -27,12 +27,10 @@ class Measurement():
     def __init__(
             self,
             spectra: List[Spectrum],
-            positions: List[Tuple[Union[float, int], ...]],
-            grid_indices: List[Tuple[int, ...]] = None,
-            metadata: Union[Metadata, Dict[str, Any]] = None,
+            grid_indices: Optional[Union[np.ndarray, Sequence[Sequence[int]]]] = None,
+            positions: Optional[Union[np.ndarray, Sequence[Sequence[int]]]] = None,
+            metadata: Optional[Union[Metadata, Dict[str, Any]]] = None,
             percolate_metadata: bool = True) -> None:
-        """Initialize a measurement containing multiple spectra."""
-
         for i, item in enumerate(spectra):
             if not isinstance(item, Spectrum):
                 raise TypeError(
@@ -41,7 +39,19 @@ class Measurement():
                 )
 
         self._spectra: List[Spectrum] = spectra
-        pass
+        self._profile: SpatialProfile = SpatialProfile(grid_indices=grid_indices, positions=positions)
+
+        if self._profile.is_structured() and len(self._spectra) != self._profile.n_points:
+            raise ValueError(
+                f"Invalid lengths: Number of spectra must match the number of spatial points. "
+                f"Got n_spectra={len(spectra)} and n_spatial_points={self._profile.n_points}."
+            )
+        
+        # sort spectra according to spatial profile sorting order
+        if self._profile.sort_order is not None:
+            self._spectra = [self._spectra[i] for i in self._profile.sort_order]
+
+        self._metadata: Metadata = Metadata.as_metadata(metadata)
     
     def __repr__(self) -> str:
         pass

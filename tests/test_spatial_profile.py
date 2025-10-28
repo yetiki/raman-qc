@@ -154,6 +154,9 @@ def test_invalid_init_with_missing_positions():
                                       [91, 56, 34], [91, 56, 40]]) 
 
 def test_valid_init_with_grid_indices_and_positions():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+
     # single
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0]],
                                              positions=[[1.2, 3.4, 5.6]])
@@ -204,6 +207,19 @@ def test_invalid_init_with_grid_indices_and_positions():
     with pytest.raises(ValueError):
         _ = SpatialProfile(grid_indices=[[0, 0], [0, 1]], positions=[[0.0], [0.0, 1.0], [0.0, 2.0]])
 
+def test_sort_order():
+    # grid_indices
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 2], [0, 0], [0, 1]])
+    assert np.all(profile.sort_order == np.array([1, 2, 0]))
+
+    # positions
+    profile: SpatialProfile = SpatialProfile(positions=[[0.0, 2.0], [0.0, 0.0], [0.0, 1.0]])
+    assert np.all(profile.sort_order == np.array([1, 2, 0]))
+
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.sort_order is None
+
 def test_infer_indices_from_positions():
     # point
     profile: SpatialProfile = SpatialProfile(positions = np.array([[1, 2]]))
@@ -235,6 +251,10 @@ def test_infer_indices_from_positions():
 
 
 def test_shape():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.shape is None
+
     # point
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0]]) 
     assert profile.shape == (1,)
@@ -256,6 +276,10 @@ def test_shape():
     assert profile.shape == (2, 2, 3)
 
 def test_profile_type():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.profile_type is 'unstructured'
+
     # point
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0]]) 
     assert profile.profile_type == 'point'
@@ -277,6 +301,10 @@ def test_profile_type():
     assert profile.profile_type == 'volume'
 
 def test_n_points():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.n_points is None
+
     # single
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0]]) 
     assert profile.n_points == 1
@@ -340,6 +368,11 @@ def test_ndim_with_positions():
                                                            [1, 1, 0], [1, 1, 1], [1, 1, 2],])
     assert profile.ndim == 3
 
+def test_ndim_with_none():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.ndim is None
+
 def test_is_structured_with_grid_indices():
     # single
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
@@ -361,7 +394,7 @@ def test_is_structured_with_grid_indices():
                                                            [1, 1, 0], [1, 1, 1], [1, 1, 2],])
     assert profile.is_structured
 
-def test_is_structured_with_positions():
+def test_is_structured_with_positions():    
     # single
     profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
     assert profile.is_structured
@@ -382,7 +415,16 @@ def test_is_structured_with_positions():
                                                            [1, 1, 0], [1, 1, 1], [1, 1, 2],])
     assert profile.is_structured
 
+def test_is_structured_with_none():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.is_structured is False
+
 def test_has_grid_indices():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.has_grid_indices is False
+
     # no grid_indices
     profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
     assert profile.has_grid_indices
@@ -392,6 +434,10 @@ def test_has_grid_indices():
     assert profile.has_grid_indices
 
 def test_has_positions():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.has_positions is False
+
     # no positions
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
     assert profile.has_positions is False
@@ -430,6 +476,10 @@ def test_bounds():
     assert np.all(profile.bounds[1] == np.array([1, 1, 2]))
 
 def test_get_grid_index():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.get_grid_index(0) is None
+
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0]]) 
     assert np.all(profile.get_grid_index(0) == np.array([0, 0, 0]))
 
@@ -438,6 +488,10 @@ def test_get_grid_index():
     assert profile.get_grid_index(1, default='default') == 'default'
 
 def test_get_position():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    assert profile.get_position(0) is None
+
     profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
     assert np.all(profile.get_position(0) == np.array([0, 0, 0]))
 
@@ -451,6 +505,11 @@ def test_get_position():
     assert profile.get_position(0, default='default') == 'default'
 
 def test_get_neighbours_by_grid_index():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    with pytest.raises(ValueError):
+        profile._get_neighbours_by_grid_index([0])
+
     # 1d profile
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0], [1], [2], [3]]) 
     assert np.all(profile._get_neighbours_by_grid_index([1]) == [0, 2])
@@ -486,6 +545,11 @@ def test_get_neighbours_by_grid_index():
         profile._get_neighbours_by_grid_index([0], mode='invalid mode')
 
 def test_get_neighbours_by_position():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    with pytest.raises(ValueError):
+        profile._get_neighbours_by_position([0])
+
     # single
     profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0]]) 
     assert profile._get_neighbours_by_position([0, 0, 0]) is None
@@ -532,6 +596,11 @@ def test_valid_get_neighbours():
     assert np.all(profile.get_neighbours(1, mode='full') == [0, 2, 3, 4, 5])
 
 def test_invalid_get_neighbours():
+    # None
+    profile: SpatialProfile = SpatialProfile()
+    with pytest.raises(ValueError):
+        profile.get_neighbours(0)
+
     # index out of range
     profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0, 0], [0, 0, 1]]) 
     with pytest.raises(IndexError):
