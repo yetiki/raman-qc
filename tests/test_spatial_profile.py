@@ -450,16 +450,33 @@ def test_get_position():
     assert profile.get_position(0) is None
     assert profile.get_position(0, default='default') == 'default'
 
-
 def test_get_neighbours_by_grid_index():
-    # single
+    # 1d profile
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0], [1], [2], [3]])
+    assert np.all(profile.get_neighbours(1, mode='2-connectivity') == np.array([[0], [2]]))
 
-    # line
+    # 2d profile
+    profile: SpatialProfile = SpatialProfile(grid_indices=[[0, 0], [0, 1], [0, 2],
+                                                           [1, 0], [1, 1], [1, 2]])
+    assert np.all(profile.get_neighbours(1, mode='4-connectivity') == np.array([[0, 0], [0, 2], [1, 1]]))
+    assert np.all(profile.get_neighbours(1, mode='8-connectivity') == np.array([[0, 0], [0, 2], [1, 0], [1, 1], [1, 2]]))
 
-    # map
-
-    # volume
-    pass
+    # 3d profile
+    profile: SpatialProfile = SpatialProfile(positions=[[0, 0, 0], [0, 0, 1], [0, 0, 2],
+                                                        [0, 1, 0], [0, 1, 1], [0, 1, 2],
+                                                        [0, 2, 0], [0, 2, 1], [0, 2, 2],
+                                                        [1, 0, 0], [1, 0, 1], [1, 0, 2],
+                                                        [1, 1, 0], [1, 1, 1], [1, 1, 2],
+                                                        [1, 2, 0], [1, 2, 1], [1, 2, 2],
+                                                        [2, 0, 0], [2, 0, 1], [2, 0, 2],
+                                                        [2, 1, 0], [2, 1, 1], [2, 1, 2],
+                                                        [2, 2, 0], [2, 2, 1], [2, 2, 2],
+                                                        ])
+    assert np.all(profile.get_neighbours(0, mode='6-connectivity') == np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]]))
+    assert np.all(profile.get_neighbours(10, mode='6-connectivity') == np.array([[0, 0, 1], [1, 0, 0], [1, 0, 2], [1, 1, 1], [2, 0, 1]]))
+    assert np.all(profile.get_neighbours(10, mode='26-connectivity') == np.array([[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 1, 0], [0, 1, 1], [0, 1, 2],
+                                                                                  [1, 0, 0], [1, 0, 2], [1, 1, 0], [1, 1, 1], [1, 1, 2],
+                                                                                  [2, 0, 0], [2, 0, 1], [2, 0, 2], [2, 1, 0], [2, 1, 1], [2, 1, 2]]))
 
 def test_get_neighbours_by_positions():
     # single
@@ -473,7 +490,18 @@ def test_get_neighbours_by_positions():
     # no positions
     pass
 
-def test_get_neighbours():
+def test_valid_get_neighbours():
+    # single
+
+    # line
+
+    # map
+
+    # volume
+
+    pass
+
+def test_invalid_get_neighbours():
     # single
 
     # line
