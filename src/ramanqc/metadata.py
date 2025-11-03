@@ -29,12 +29,12 @@ class Metadata:
     Parameters
     ----------
     data : Optional[Dict[str, Any]]
-        A dictionary containing metadata fields and values.
+        A dictionary containing metadata keys and values.
         
     Attributes
     ----------
     _data : Dict[str, Any]
-        A dictionary containing metadata fields and values.
+        A dictionary containing metadata keys and values.
     """
     def __init__(self,
                  data: Optional[Dict[str, Any]] = None) -> None:
@@ -42,29 +42,29 @@ class Metadata:
         self._data: Dict[str, Any] = data or {}
 
     def __getitem__(self, key) -> Any:
-        """Return the value of the specified metadata field."""
+        """Return the value of the specified metadata key."""
         if key in self._data:
             return self._data.get(key)
         raise KeyError(
-            f"Invalid field: metadata field must be in {list(self._data.keys())}. ",
-            f"Got field='{key}'."
+            f"Invalid key: metadata key must be in {list(self._data.keys())}. ",
+            f"Got key='{key}'."
         )
 
     def __setitem__(self, key, value) -> None:
-        """Set the value of the specified metadata field."""
+        """Set the value of the specified metadata key."""
         self._data[key] = value
 
     def __getattr__(self, key) -> Any:
-        """Return the value of the specified metadata field."""
+        """Return the value of the specified metadata key."""
         if key in self._data:
             return self._data[key]
         raise AttributeError(
-            f"Invalid field: metadata field must be in {list(self._data.keys())}. ",
-            f"Got field='{key}'."
+            f"Invalid key: metadata key must be in {list(self._data.keys())}. ",
+            f"Got key='{key}'."
             )
 
     def __setattr__(self, key, value) -> None:
-        """Set the value of the specified metadata field."""
+        """Set the value of the specified metadata key."""
         if key == "_data":
             super().__setattr__(key, value)
         else:
@@ -82,7 +82,7 @@ class Metadata:
         return "\n".join(description)
     
     def __len__(self) -> int:
-        """Return the number of metadata fields."""
+        """Return the number of metadata keys."""
         return len(self._data)
     
     @classmethod
@@ -108,12 +108,12 @@ class Metadata:
         return list(self._data.items())
     
     @property
-    def n_fields(self) -> int:
-        """Return the number of metadata fields."""
+    def n_keys(self) -> int:
+        """Return the number of metadata keys."""
         return len(self._data)
     
     def get(self, key: str, default: Any = None):
-        """Return the value of the spcified field if it exits else returns a default value."""
+        """Return the value of the spcified key if it exits else returns a default value."""
         return self._data.get(key, default)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -135,3 +135,8 @@ class Metadata:
     def copy(self) -> Self:
         """Return a deep copy of this metadata."""
         return Metadata(self._data.copy())
+    
+    def set_default(self, key: str, default: Any) -> Any:
+        """Set the value of the specified key to default if it does not exist."""
+        if key not in self._data:
+            self._data[key] = default
