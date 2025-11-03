@@ -42,6 +42,7 @@ class Metadata:
         self._data: Dict[str, Any] = data or {}
 
     def __getitem__(self, key) -> Any:
+        """Return the value of the specified metadata field."""
         if key in self._data:
             return self._data.get(key)
         raise KeyError(
@@ -50,9 +51,11 @@ class Metadata:
         )
 
     def __setitem__(self, key, value) -> None:
+        """Set the value of the specified metadata field."""
         self._data[key] = value
 
     def __getattr__(self, key) -> Any:
+        """Return the value of the specified metadata field."""
         if key in self._data:
             return self._data[key]
         raise AttributeError(
@@ -61,13 +64,22 @@ class Metadata:
             )
 
     def __setattr__(self, key, value) -> None:
+        """Set the value of the specified metadata field."""
         if key == "_data":
             super().__setattr__(key, value)
         else:
             self._data[key] = value
     
     def __repr__(self) -> str:
+        """Return an unambiguous string representation of the metadata."""
         return f"Metadata(data={self._data})"
+    
+    def __str__(self) -> str:
+        """Return a human-readable summary of the metadata."""
+        description: List[str] = []
+        for k, v in self._data.items():
+            description.append(f"{k}: {v}")
+        return "\n".join(description)
     
     def __len__(self) -> int:
         """Return the number of metadata fields."""
