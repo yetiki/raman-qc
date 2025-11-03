@@ -37,8 +37,7 @@ class SpatialProfile:
         grid_indices: Optional[Union[np.ndarray, Sequence[Sequence[int]]]] = None,
         positions: Optional[Union[np.ndarray, Sequence[Sequence[float]]]] = None,
     ) -> None:
-        
-        # ensure arrays 2D, homogeneous, and at most 3 spatial dimensions
+        # ensure arrays are 2D, homogeneous, and at most 3 spatial dimensions
         if grid_indices is not None:
             self._grid_indices: np.ndarray = np.asarray(grid_indices, dtype=int)
             self._validate_array(self._grid_indices, name='grid_indices')
@@ -50,9 +49,6 @@ class SpatialProfile:
             self._validate_array(self._positions, name='positions')
         else:
             self._positions: None = None
-
-        # # ensure at least one of grid_indices or positions is defined
-        # self._validate_inputs()
 
         # ensure lengths match if both grid_indices and positions are defined
         self._validate_lengths()
@@ -96,26 +92,18 @@ class SpatialProfile:
         """Ensure array is 2D, homogeneous, and at most 3 spatial dimensions."""
         if arr.ndim != 2:
             raise ValueError(
-                f"Invalid {name} shape: {name} must be a 2D array of at most 3 spatial dimensions. "
+                f"Invalid {name}: {name} must be a 2D array of at most 3 spatial dimensions. "
                 f"Got {arr.ndim}D array after conversion."
             )
         if arr.shape[1] == 0 or arr.shape[1] > 3:
             raise ValueError(
-                f"Invalid number of spatial dimensions: {name} must have between 1 and 3 spatial dimensions. "
+                f"Invalid {name}: {name} must have between 1 and 3 spatial dimensions. "
                 f"Got {arr.shape[1]} spatial dimensions."
             )
         if len(np.unique(arr, axis=0)) != len(arr):
             raise ValueError(
-                f"Invalid {name} values: each item in {name} must be unique. "
+                f"Invalid {name}: each item in {name} must be unique. "
                 f"Got {len(arr) - len(np.unique(arr, axis=0))} duplicates in {name}."
-            )
-
-    def _validate_inputs(self) -> None:
-        """Ensure that at least one of grid_indices or positions is defined."""
-        if self._grid_indices is None and self._positions is None:
-            raise ValueError(
-                f"Invalid value: either grid_indices or positions must be provided. "
-                f"Got grid_indices=None and positions=None."
             )
            
     def _validate_lengths(self) -> None:
@@ -165,7 +153,7 @@ class SpatialProfile:
             missing: Set = expected_coords - shifted_actual
             if missing:
                 raise ValueError(
-                    f"Invalid grid_indices values: grid_indices must be from a complete uniform grid. "
+                    f"Invalid grid_indices: grid_indices must be from a complete uniform grid. "
                     f"Got {len(missing)} missing indices from expected uniform grid."
                 )
 
@@ -210,10 +198,7 @@ class SpatialProfile:
             return None
 
     def _validate_positions_against_indices(self) -> None:
-        """Ensure positions and grid_indices correspond to the same structure."""
-        pass
-        # TODO
-        
+        """Ensure positions and grid_indices correspond to the same structure."""       
         if self._grid_indices is None or self._positions is None:
             return None
         
@@ -232,20 +217,23 @@ class SpatialProfile:
 
         if len(unique_indices) != len(unique_positions):
             raise ValueError(
-                f"Invalid values: grid_indices and positions must have the same number of unique values. "
+                f"Invalid grid_indices and positions: grid_indices and positions must have the same number of unique values. "
                 f"Got {len(unique_indices)} unique values in grid_indices. "
                 f"Got {len(unique_positions)} unique values in positions. "
             )
         
         if not np.array_equal(unique_indices_map, unique_positions_map):
             raise ValueError(
-                f"Invalid values: grid_indices and positions must describe the same structure. "
+                f"Invalid grid_indices and positions: grid_indices and positions must describe the same structure. "
             )
 
     def _infer_indices_from_positions(self, tolerance: float = 1e-6) -> np.ndarray:
         """Infer grid indices from ordered and regular spatial positions."""
         if self._positions is None:
-            raise ValueError("Cannot infer grid indices — positions are not defined.")      
+            raise ValueError(
+                f"Invalid use: Cannot infer grid indices if positions are not defined. "
+                f"Got positions=None."
+            )      
 
         ndim: int = self._positions.shape[1]
 
@@ -277,10 +265,9 @@ class SpatialProfile:
         reconstructed: np.ndarray = mins + indices * units
         if not np.allclose(self._positions, reconstructed, atol=tolerance):
             raise ValueError(
-                "Invalid positions values: positions must be consistent with a regular grid. " 
-                f"Cannot infer grid_indices reliably."
+                f"Invalid positions: positions must be mappable to a consistent grid indices within tolerance={tolerance}. "
+                f"Got positions={self._positions} and reconstructed positions={reconstructed}."
             )
-
         return indices
     
     def _infer_shape_from_indices(self) -> Sequence[int]:
@@ -358,6 +345,7 @@ class SpatialProfile:
         return len(self._grid_indices)
 
     def __repr__(self) -> str:
+        """Return an unambiguous string representation of the spatial profile."""
         if self._grid_indices is None:
             if self._positions is None:
                 return f"SpatialProfile(grid_indices=None, positions=None)"
@@ -368,6 +356,17 @@ class SpatialProfile:
                 return f"SpatialProfile(grid_indices=(shape={self._shape}, ndim={self._ndim}), positions=None)"
             else:
                 return f"SpatialProfile(grid_indices=(shape={self._shape}, ndim={self._grid_indices.shape[1]}), positions=(shape={self._shape}, ndim={self._positions.shape[1]}))"
+
+    def __str__(self) -> str:
+        """Return a human-readable summary of the spatial profile."""
+        description: List[str] = []
+        description.append(f"{'Number of points':>24s}:\t{self._n_points}")
+        description.append(f"{'Profile type':>24s}:\t{self._profile_type}")
+        description.append(f"{'Shape':>24s}:\t{self._shape}")
+        description.append(f"{'Dimensionality':>24s}:\t{self.ndim}")
+        description.append(f"{'Grid indices':>24s}:\t{self._grid_indices}")
+        description.append(f"{'Positions':>24s}:\t{self._positions}")
+        return "\n".join(description)
 
     def __len__(self) -> int:
         """Return the number of spectra (i.e. number of grid points or positions)."""
@@ -452,7 +451,7 @@ class SpatialProfile:
             use_positions: bool = False,
             mode: Literal['grid', 'full'] = None,
             k: int = None,
-    ) -> List[int]:
+        ) -> List[int]:
         """Return indices of neighbouring spectra based on grid or spatial proximity."""
         if self._grid_indices is None and self._positions is None:
             raise ValueError(
@@ -472,7 +471,7 @@ class SpatialProfile:
         if use_positions and mode is not None:
             raise ValueError(
                 f"Invalid mode: mode only used when use_positions is False. "
-                f"Got use_positions={use_positions} and mode={mode}"
+                f"Got use_positions={use_positions} and mode='{mode}'"
             )
         
         if not use_positions and k is not None:
@@ -494,7 +493,7 @@ class SpatialProfile:
             self,
             grid_index: np.ndarray,
             mode: Literal['grid', 'full'] = 'grid'
-    ) -> np.ndarray:
+        ) -> np.ndarray:
         """Neighbour detection for regular grid indices."""
         if self._grid_indices is None:
             raise ValueError(
@@ -506,7 +505,7 @@ class SpatialProfile:
         if mode not in VALID_MODES:
             raise ValueError(
                 f"Invalid mode value: mode must be in {VALID_MODES}. "
-                f"Got mode={mode}"
+                f"Got mode='{mode}'"
             )
         
         if grid_index not in self._grid_indices:
@@ -566,7 +565,7 @@ class SpatialProfile:
         if mode not in VALID_MODES:
             raise ValueError(
                 f"Invalid mode value: mode must be in {VALID_MODES}. "
-                f"Got mode={mode}"
+                f"Got mode='{mode}'"
             )
         if self.ndim is None:
             raise ValueError(
@@ -605,7 +604,3 @@ class SpatialProfile:
                     [0, -1, 0], [0, 1, 0],
                     [0, 0, -1], [0, 0, 1],
                 ])
-
-    def summary(self) -> str:
-        """Return a human-readable summary of the spatial profile."""
-        pass
