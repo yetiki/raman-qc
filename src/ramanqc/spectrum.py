@@ -2,10 +2,10 @@
 Author: Yoshiki Cook
 Date: 2025-10-20
 
-Updated: 2025-10-28
+Updated: 2025-11-03
 """
 
-from typing import Optional, Union, Self, Any, Dict, Tuple
+from typing import Optional, Union, Self, Any, Dict, Tuple, List
 import numpy as np
 from metadata import Metadata
 from measurement import Measurement
@@ -31,37 +31,31 @@ class Spectrum:
             wavenumbers: np.ndarray,
             intensities: np.ndarray,
             metadata: Optional[Union[Dict[str, Any], Metadata]] = None,
-            parent: Optional['Measurement'] = None) -> None:
-        
-        w: np.ndarray = np.asarray(wavenumbers, dtype=float)
-        i: np.ndarray = np.asarray(intensities, dtype=float)
-
-        if w.ndim > 1:
-            raise ValueError(
-                f"Invalid wavenumbers shape: wavenumbers must be a 1D array of floats. "
-                f"Got ndim={w.ndim}"
-            )
-
-        if i.ndim > 1:
-            raise ValueError(
-                f"Invalid intensitiesshape: intensities must be a 1D array of floats. "
-                f"Got ndim={i.ndim}"
-            )
-
-        if len(w) != len(i):
-            raise ValueError(
-                f"Invalid shape: wavenumbers and intensities must have the same shape. "
-                f"Got len(wavenumbers)={len(w)} and len(intensities)={len(i)}."
-            )
-        
-        self._wavenumbers: np.ndarray = w
-        self._intensities: np.ndarray = i
-        self._sort()
+            parent: Optional['Measurement'] = None
+        ) -> None:
+        self._wavenumbers: np.ndarray = wavenumbers
+        self._intensities: np.ndarray = intensities
         self._metadata: Metadata = Metadata.as_metadata(metadata) or None
-        self._parent = weakref.ref(parent) if parent is not None else None
+        self._parent = weakref.ref(parent) if parent else None
 
+        # ensure wavenumbers and intensities are of the correct dtype and length
+        self._validate_wavenumbers_and_intensities()
+
+        # sort wavenumbers and intensities in order of ascending wavenumber
+        self._sort()
+        
     def __repr__(self) -> str:
-        return f"Spectrum(wavenumbers=array(shape={self._wavenumbers.shape}), intensities=array(shape={self._intensities.shape}), metadata={self._metadata})"
+        """Return an unambiguous string representation of the spectrum."""
+        return f"Spectrum(wavenumbers=array(shape={self._wavenumbers.shape}), intensities=array(shape={self._intensities.shape}), metadata={self._metadata}, parent={self._parent})"
+
+    def __str__(self) -> str:
+        """Return a human-readable summary of the spectrum."""
+        description: List[str] = []
+        description.append(f"{'Number of points':>24s}:\t{self._wavenumbers.shape[0]}")
+        description.append(f"{'Wavenumber range':>24s}:\t{self.wavenumber_range[0]} - {self.wavenumber_range[1]} cm⁻¹")
+        description.append(f"{'Resolution':>24s}:\t{self.resolution:.2f} cm⁻¹")
+        description.append(f"{'Metadata entries':>24s}:\t{len(self._metadata) if self._metadata else 0}")
+        return "\n".join(description)
 
     def __len__(self) -> int:
         """Return the number of (wavenumber, intensity) points in the spectrum."""
@@ -71,7 +65,6 @@ class Spectrum:
         """Check equality between two Spectrum instances."""
         if not isinstance(other, Spectrum):
             return False
-        
         w_equal: bool = np.array_equal(self._wavenumbers, other.wavenumbers)
         i_equal: bool = np.array_equal(self._intensities, other.intensities)
         m_equal: bool = self._metadata == other.metadata
@@ -82,13 +75,13 @@ class Spectrum:
         if not isinstance(other, Spectrum):
             raise TypeError(
                 f"Invalid type: can only add Spectrum instances. "
-                f"Got type='{type(other)}'."
+                f"Got type='Spectrum' and type='{type(other)}'."
             )
         
         if not np.array_equal(self._wavenumbers, other.wavenumbers):
             raise ValueError(
                 f"Invalid wavenumbers: cannot add spectra with different wavenumbers. "
-                f"Got self.wavenumbers={self._wavenumbers} and other.wavenumbers={other.wavenumbers}."
+                f"Got wavenumbers={self._wavenumbers} and wavenumbers={other.wavenumbers}."
             )
         
         new_intensities: np.ndarray = self._intensities + other.intensities
@@ -113,6 +106,53 @@ class Spectrum:
         new_metadata: Metadata = Metadata.merge(self._metadata.copy(), other.metadata.copy())
         return Spectrum(self._wavenumbers.copy(), new_intensities, metadata=new_metadata, parent=None)
 
+    def _validate_wavenumbers_and_intensities(self) -> None:
+        """Ensure wavenumbers and intensities are of the correct dtype and length."""
+        try:
+            self._wavenumbers = np.asarray(self._wavenumbers, dtype=float)
+        except ValueError:
+            raise TypeError(
+                f"Invalid wavenumbers: wavenumbers must be convertible to a numpy array of floats. "
+                f"Got type='{type(self._wavenumbers)}'."
+            )
+        except TypeError:
+            raise TypeError(
+                f"Invalid wavenumbers: wavenumbers must be convertible to a numpy array of floats. "
+                f"Got type='{type(self._wavenumbers)}'."
+            )
+        
+        try:
+            self._intensities = np.asarray(self._intensities, dtype=float)
+        except ValueError:
+            raise TypeError(
+                f"Invalid intensities: intensities must be convertible to a numpy array of floats. "
+                f"Got type='{type(self._intensities)}'."
+            )
+        except TypeError:
+            raise TypeError(
+                f"Invalid intensities: intensities must be convertible to a numpy array of floats. "
+                f"Got type='{type(self._intensities)}'."
+            )
+
+
+        if self._wavenumbers.ndim > 1:
+            raise ValueError(
+                f"Invalid wavenumbers: wavenumbers must be a 1D array of floats. "
+                f"Got ndim={self._wavenumbers.ndim}"
+            )
+
+        if self._intensities.ndim > 1:
+            raise ValueError(
+                f"Invalid intensities: intensities must be a 1D array of floats. "
+                f"Got ndim={self._intensities.ndim}"
+            )
+
+        if len(self._wavenumbers) != len(self._intensities):
+            raise ValueError(
+                f"Invalid shape: wavenumbers and intensities must have the same shape. "
+                f"Got len(wavenumbers)={len(self._wavenumbers)} and len(intensities)={len(self._intensities)}."
+            )
+
     def _sort(self, reverse=False) -> None:
         """Sort the wavenumbers and intesities by wavenumber in ascending or descending order."""
         sorted_idx: np.ndarray = self._wavenumbers.argsort()
@@ -125,44 +165,52 @@ class Spectrum:
 
     @property
     def wavenumbers(self) -> np.ndarray:
+        """Return the wavenumber axis of the spectrum."""
         return self._wavenumbers.copy()
     
     @property
     def intensities(self) -> np.ndarray:
+        """Return the intensity axis of the spectrum."""
         return self._intensities.copy()
     
     @property
     def metadata(self) -> Metadata:
-        return self._metadata.copy()
+        """Return the metadata of the spectrum."""
+        return self._metadata.copy() if self._metadata else Metadata()
     
     @metadata.setter
     def metadata(self, metadata: Union[Dict[str, Any], Metadata]) -> None:
+        """Set the metadata of the spectrum."""
         self._metadata = Metadata.as_metadata(metadata)
 
     @property
+    def parent(self) -> Optional['Measurement']:
+        """Return the parent Measurement."""
+        return self._parent() if self._parent else None
+    
+    @property
     def index(self) -> Optional[int]:   
         """Return the index of the spectrum within its parent Measurement."""
-        if self._parent is None:
+        parent: Measurement = self._parent
+        if not parent:
             return None
-        
-        for i, s in enumerate(self._parent.spectra):
-            if s is self:
-                return i
-        return None
+        return parent._index_of(self)
 
     @property
     def grid_index(self) -> Optional[np.ndarray]:
-        """Return the spatial grid index of the spectrum within its parent Measurement."""
-        if self._parent is None or self.index is None or not self._parent.is_structured:
+        """Return the spatial grid index (i, j, k, ...) of the spectrum within its parent Measurement."""
+        parent: Measurement = self._parent
+        if not parent or parent.grid_indices is None:
             return None
-        return self._parent.grid_indexes[self.index]
+        return parent.grid_indexes[self.index]
     
     @property
     def position(self) -> Optional[np.ndarray]:
-        """Return the spatial position of the spectrum within its parent Measurement."""
-        if self._parent is None or self.index is None or not self._parent.is_structured or self._parent.positions is None:
+        """Return the spatial position (x, y, z, ...) of the spectrum within its parent Measurement."""
+        parent: Measurement = self._parent
+        if not parent or parent.positions is None:
             return None
-        return self._parent.positions[self.index]
+        return parent.positions[self.index]
         
     @property
     def n_points(self) -> int:
@@ -171,20 +219,13 @@ class Spectrum:
 
     @property
     def resolution(self) -> int:
-        """Return the spectral resolution of the spectrum."""
-        return abs(np.diff(self._wavenumbers)).max()
+        """Return the average spectral resolution of the spectrum."""
+        return abs(np.diff(self._wavenumbers)).mean()
     
     @property
     def wavenumber_range(self) -> Tuple[int, int]:
-        """Return the wavenumber range of the spectrum as (min, max)."""
+        """Return the wavenumber range of the spectrum."""
         return self._wavenumbers.min(), self._wavenumbers.max()
-
-    @property
-    def parent(self) -> Optional[Measurement]:
-        """Return the parent Measurement instance if available."""
-        if self._parent is None:
-            return None
-        return self._parent()
     
     def copy(self):
         """Return a deep copy of the spectrum."""
