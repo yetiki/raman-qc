@@ -85,6 +85,12 @@ class Metadata:
         """Return the number of metadata keys."""
         return len(self._data)
     
+    def __eq__(self, value):
+        """Check equality between two Metadata instances."""
+        if not isinstance(value, Metadata):
+            return False
+        return self._data == value.to_dict()
+    
     @classmethod
     def as_metadata(cls, other: Union[Dict[str, Any], Self]) -> Self:
         """Convert a dictionary to a Metadata instance if needed."""
