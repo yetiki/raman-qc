@@ -4,7 +4,7 @@ Date: 2025-10-20
 
 Updated: 2025-11-03
 """
-
+from __future__ import annotations
 from typing import Optional, Union, Any, List, Dict, Tuple, Sequence
 import numpy as np
 import weakref
@@ -15,6 +15,11 @@ from ramanqc.spatial_profile import SpatialProfile
 class Measurement():
     """
     Represents a single Raman spectral measurement.
+
+
+
+    During initialization, this class assigns itself as the parent 
+    of each Spectrum via its internal _parent attribute.
 
     Parameters
     ----------
@@ -34,11 +39,15 @@ class Measurement():
             percolate_metadata: bool = True
         ) -> None:
         self._spectra: List[Spectrum] = spectra
-        self._profile: SpatialProfile = SpatialProfile(grid_indices=grid_indices, positions=positions)
         self._metadata: Metadata = Metadata.as_metadata(metadata)
         
         # ensure each spectrum in spectra have the same dtype, length, and wavenumbers
         self._validate_spectra()
+
+        if len(self._spectra) == 1 and grid_indices is None and positions is None:
+            grid_indices: np.ndarray = np.zeros(shape=(1, 1))
+
+        self._profile: SpatialProfile = SpatialProfile(grid_indices=grid_indices, positions=positions)
 
         # ensure the number of spectra match the number of spatial points
         self._validate_spectra_and_profile()
@@ -46,21 +55,12 @@ class Measurement():
         # sort spectra according to the sorting order specified by the spatial profile
         self._sort_spectra()
 
-        # register the parent reference in each spectrum
+        # register the current measurement as the parent reference in each spectrum
         self._register_spectra()
 
         # optionally propagate the metadata to each spectrum
         if percolate_metadata:
             self._percolate_metadata_to_spectra()
-
-        self._wavenumbers: np.ndarray = self._spectra[0].wavenumbers
-        self._intensities: np.ndarray = np.array([s.intensities for s in self._spectra])
-        self._resolution: float = self._spectra[0].resolution
-        self._wavenumber_range: Tuple[float, float] = self._spectra[0].wavenumber_range
-        self._n_spectra: int = len(self._spectra)
-        self._n_points: int = self._spectra[0].n_points
-        self._profile_type: str = self._profile.profile_type
-        self._shape: Optional[Tuple[int, ...]] = self._profile.shape
 
     def _validate_spectra(self, tolerance: float = 1e-6) -> None:
         """Ensure each spectrum in spectra have the same dtype, length, and wavenumbers."""
@@ -104,7 +104,7 @@ class Measurement():
             
     def _validate_spectra_and_profile(self) -> None:
         """Ensure the number of spectra match the number of spatial points."""
-        if self._profile.is_structured() and len(self._spectra) != self._profile.n_points:
+        if self._profile.is_structured and len(self._spectra) != self._profile.n_points:
             raise ValueError(
                 f"Invalid lengths: Number of spectra must match the number of spatial points. "
                 f"Got n_spectra={len(self._spectra)} and n_spatial_points={self._profile.n_points}."
@@ -118,15 +118,15 @@ class Measurement():
     def _register_spectra(self) -> None:
         """Register the current Measurement as the parent reference in each spectrum."""
         for s in self._spectra:
-            s._parent = weakref.ref(self)
+            s._set_parent(self)
 
     def _percolate_metadata_to_spectra(self) -> None:
         """Propagate the measurement metadata to each spectrum."""
         for s in self._spectra:
-            s._metadata.set_default('measurement_metadata', self._metadata)
+            s._metadata.update(self._metadata)
             
-    def _index_of(self, spectrum: Spectrum) -> int:
-        """Return the index of the specified spectrum in the measurement."""
+    def _spectral_index_of(self, spectrum: Spectrum) -> int:
+        """Return the spectral index of the specified spectrum in the measurement."""
         for i, s in enumerate(self._spectra):
             if s is spectrum:
                 return i
@@ -136,31 +136,37 @@ class Measurement():
         )
         
     def __repr__(self) -> str:
-        """Return an unambiguous string representation of the Measurement."""
-        return f"Measurement(n_spectra={self.n_spectra}, profile_type={self.profile_type})"
+        """Return an unambiguous string representation of the measurement."""
+        return f"Measurement(profile_type='{self.profile_type}', n_spectra={self.n_spectra}, metadata={self._metadata})"
     
     def __str__(self) -> str:
-        """Return a human-readable summary of the Measurement."""
+        """Return a human-readable summary of the measurement."""
         description: List[str] = []
-        description.append(f"{'Number of points':>24s}:\t{self._n_points}")
-        description.append(f"{'Profile type':>24s}:\t{self._profile_type}")
-        description.append(f"{'Shape':>24s}:\t{self._shape}")
+        description.append(f"{'Number of spectra':>24s}:\t{self.n_spectra}")
+        description.append(f"{'Number of points':>24s}:\t{self.n_points}")
+        description.append(f"{'Profile type':>24s}:\t{self.profile_type}")
+        description.append(f"{'Shape':>24s}:\t{self.shape}")
         description.append(f"{'Metadata entries':>24s}:\t{len(self._metadata) if self._metadata else 0}")
         return "\n".join(description)
 
     def __len__(self) -> int:
         """Return the number of spectra in the measurement."""
         return self.n_spectra
+    
+    @property
+    def spectra(self) -> List[Spectrum]:
+        "Return each spectrum of the measurement."
+        return self._spectra.copy()
 
     @property
     def wavenumbers(self) -> np.ndarray:
         """Return the wavenumber axis of the measurement."""
-        return self._wavenumbers
+        return self._spectra[0].wavenumbers
 
     @property
     def intensities(self) -> np.ndarray:
         """Return the intensities array of the measurement."""
-        return self._intensities
+        return np.array([s.intensities for s in self._spectra])
 
     @property
     def metadata(self) -> Metadata:
@@ -170,22 +176,22 @@ class Measurement():
     @property
     def n_spectra(self) -> int:
         """Return the number of spectra in the measurement."""
-        return self._n_spectra
+        return len(self._spectra)
     
     @property
     def n_points(self) -> int:
         """Return the number of (wavenumber, intensity) points in each spectrum."""
-        return self._n_points
+        return self._spectra[0].n_points
 
     @property
     def resolution(self) -> float:
-        """Return the spectral resolution of the measurement."""
-        return self._resolution
+        """Return the spectral resolution of each spectrum in the measurement."""
+        return self._spectra[0].resolution
 
     @property
     def wavenumber_range(self) -> Tuple[float, float]:
         """Return the wavenumber range of the measurement."""
-        return self._wavenumber_range
+        return self._spectra[0].wavenumber_range
 
     @property
     def grid_indices(self) -> Optional[np.ndarray]:
@@ -200,12 +206,12 @@ class Measurement():
     @property
     def profile_type(self) -> str:
         """Return the type of spatial profile."""
-        return self._profile_type
+        return self._profile.profile_type
     
     @property
     def shape(self) -> Tuple[int, ...]:
         """Return the shape of the spatial grid if structured."""
-        return self._shape
+        return self._profile.shape
 
     @property
     def ndim(self):
@@ -219,24 +225,68 @@ class Measurement():
     
     @classmethod
     def from_array(
-        self,
+        cls,
         wavenumbers: np.ndarray,
         intensities: np.ndarray,
         positions: np.ndarray = None,
         metadata: Union[Metadata, Dict[str, Any]] = None,
-        percolate_metadata: bool = True
+        percolate_metadata: bool = True,
+        infer_grid_indices: bool = False,
     ) -> None:
         """Create a Measurement instance from wavenumber and intensity arrays."""
-        pass
+        # validate wavenumbers and intensities 
+        try:
+            wavenumbers: np.ndarray = np.asarray(wavenumbers, dtype=float)
+        except (ValueError, TypeError):
+            raise TypeError(
+                f"Invalid wavenumbers: wavenumbers must be convertible to a numpy array of floats. "
+                f"Got type='{type(wavenumbers)}'."
+            )
+        try:
+            intensities: np.ndarray = np.asarray(intensities, dtype=float)
+        except (ValueError, TypeError):
+            raise TypeError(
+                f"Invalid intensities: intensities must be convertible to a numpy array of floats. "
+                f"Got type='{type(intensities)}'."
+            )
+        if intensities.shape[-1] != wavenumbers.shape[0]:
+            raise ValueError(
+                f"Invalid wavenumbers and intensities: Last dimension of intensities must match length of wavenumbers. "
+                f"Got intensities.shape={intensities.shape} and len(wavenumbers)={wavenumbers.shape[0]}."
+            )
+        
+        # infer grid_indices
+        shape: Tuple[int] = intensities.shape[:-1]
+        n_points: int = intensities.shape[-1]
+        n_spectra: int = sum(shape)
+        ndim: int = len(shape)
 
-    def get_spectrum(self, index: int, default: Spectrum = None) -> Spectrum:
-        """Return the spectrum at the specified index."""
-        return self._spectra[index] if 0 <= index < len(self._spectra) else default
-    
-    def get_grid_index(self, index: int) -> Optional[np.ndarray]:
-        """Return the spatial grid index corresponding to a given spectrum index."""
-        return self._profile.grid_indices[index] if 0 <= index < len(self._profile.grid_indices) else None
+        if infer_grid_indices and n_spectra > 1:
+            grid_indices: Optional[np.ndarray] = np.stack(np.meshgrid(
+                *[np.arange(n) for n in shape],
+                indexing='ij'
+                ), axis=-1).reshape(-1, ndim)
+            flattened_intensities: np.ndarray = intensities.reshape(-1, n_points)
+        else:
+            grid_indices: Optional[np.ndarray] = None
+            flattened_intensities: np.ndarray = intensities.reshape(-1, n_points)
 
-    def get_position(self, index: int) -> Optional[np.ndarray]:
-        """Return the spatial position corresponding to a given spectrum index."""
-        return self._profile.positions[index] if 0 <= index < len(self._profile.positions) else None
+        # construct Spectrum objects
+        spectra: List[Spectrum] = []
+        for i in flattened_intensities:
+            s: Spectrum = Spectrum(
+                wavenumbers=wavenumbers,
+                intensities=i,
+                metadata=None,
+                parent=None, # temporary, set below
+            )
+            spectra.append(s)
+        
+        self: Measurement = cls(
+            spectra=spectra,
+            grid_indices=grid_indices,
+            positions=positions,
+            metadata=metadata,
+            percolate_metadata=percolate_metadata,
+        )
+        return self

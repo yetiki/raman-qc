@@ -190,7 +190,7 @@ class Spectrum:
     @property
     def spectral_index(self) -> Optional[int]:   
         """Return the spectral index of the spectrum within its parent Measurement."""
-        parent: Measurement = self._parent
+        parent: Measurement = self.parent
         if not parent:
             return None
         return parent._spectral_index_of(self)
@@ -198,7 +198,7 @@ class Spectrum:
     @property
     def grid_index(self) -> Optional[np.ndarray]:
         """Return the spatial grid index (i, j, k, ...) of the spectrum within its parent Measurement."""
-        parent: Measurement = self._parent
+        parent: Measurement = self.parent
         if not parent or parent.grid_indices is None:
             return None
         return parent.grid_indices[self.spectral_index]
@@ -206,7 +206,7 @@ class Spectrum:
     @property
     def position(self) -> Optional[np.ndarray]:
         """Return the spatial position (x, y, z, ...) of the spectrum within its parent Measurement."""
-        parent: Measurement = self._parent
+        parent: Measurement = self.parent
         if not parent or parent.positions is None:
             return None
         return parent.positions[self.spectral_index]
