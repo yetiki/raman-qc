@@ -4,16 +4,24 @@ Date: 2025-10-20
 
 Updated: 2025-11-03
 """
+from __future__ import annotations
+import numpy as np
+import weakref
 
 from typing import Optional, Union, Self, Any, Dict, Tuple, List
-import numpy as np
-from metadata import Metadata
-from measurement import Measurement
-import weakref
+from ramanqc.metadata import Metadata
+
+from typing import TYPE_CHECKING 
+if TYPE_CHECKING:
+    from ramanqc.measurement import Measurement  # type hints only, avoid circular referencing
 
 class Spectrum:
     """
     Represents a single Raman spectrum and its associated metadata.
+
+    _parent : weakref.ReferenceType["Measurement"]
+        Weak reference to the parent Measurement. 
+        Assigned internally by Measurement during registration.
 
     Parameters
     ----------
@@ -35,7 +43,7 @@ class Spectrum:
         ) -> None:
         self._wavenumbers: np.ndarray = wavenumbers
         self._intensities: np.ndarray = intensities
-        self._metadata: Metadata = Metadata.as_metadata(metadata) or None
+        self._metadata: Metadata = Metadata.as_metadata(metadata)
         self._parent = weakref.ref(parent) if parent else None
 
         # ensure wavenumbers and intensities are of the correct dtype and length
@@ -62,13 +70,12 @@ class Spectrum:
         return len(self._wavenumbers)
     
     def __eq__(self, other: Any) -> bool:
-        """Check equality between two Spectrum instances."""
+        """Check wavenumber and intensity equality between two Spectrum instances."""
         if not isinstance(other, Spectrum):
             return False
         w_equal: bool = np.array_equal(self._wavenumbers, other.wavenumbers)
         i_equal: bool = np.array_equal(self._intensities, other.intensities)
-        m_equal: bool = self._metadata == other.metadata
-        return w_equal and i_equal and m_equal
+        return w_equal and i_equal
     
     def __add__(self, other: Self) -> Self:
         """Pointwise addition of two Spectrum instances."""
@@ -110,30 +117,18 @@ class Spectrum:
         """Ensure wavenumbers and intensities are of the correct dtype and length."""
         try:
             self._wavenumbers = np.asarray(self._wavenumbers, dtype=float)
-        except ValueError:
+        except (ValueError, TypeError):
             raise TypeError(
                 f"Invalid wavenumbers: wavenumbers must be convertible to a numpy array of floats. "
                 f"Got type='{type(self._wavenumbers)}'."
             )
-        except TypeError:
-            raise TypeError(
-                f"Invalid wavenumbers: wavenumbers must be convertible to a numpy array of floats. "
-                f"Got type='{type(self._wavenumbers)}'."
-            )
-        
         try:
             self._intensities = np.asarray(self._intensities, dtype=float)
-        except ValueError:
+        except (ValueError, TypeError):
             raise TypeError(
                 f"Invalid intensities: intensities must be convertible to a numpy array of floats. "
                 f"Got type='{type(self._intensities)}'."
             )
-        except TypeError:
-            raise TypeError(
-                f"Invalid intensities: intensities must be convertible to a numpy array of floats. "
-                f"Got type='{type(self._intensities)}'."
-            )
-
 
         if self._wavenumbers.ndim > 1:
             raise ValueError(
@@ -163,6 +158,10 @@ class Spectrum:
         self._wavenumbers = self._wavenumbers[sorted_idx]
         self._intensities = self._intensities[sorted_idx]
 
+    def _set_parent(self, parent: 'Measurement') -> None:
+        """Set weak reference to parent Measurment (for internal use only)."""
+        self._parent = weakref.ref(parent)
+
     @property
     def wavenumbers(self) -> np.ndarray:
         """Return the wavenumber axis of the spectrum."""
@@ -189,12 +188,12 @@ class Spectrum:
         return self._parent() if self._parent else None
     
     @property
-    def index(self) -> Optional[int]:   
-        """Return the index of the spectrum within its parent Measurement."""
+    def spectral_index(self) -> Optional[int]:   
+        """Return the spectral index of the spectrum within its parent Measurement."""
         parent: Measurement = self._parent
         if not parent:
             return None
-        return parent._index_of(self)
+        return parent._spectral_index_of(self)
 
     @property
     def grid_index(self) -> Optional[np.ndarray]:
@@ -202,7 +201,7 @@ class Spectrum:
         parent: Measurement = self._parent
         if not parent or parent.grid_indices is None:
             return None
-        return parent.grid_indexes[self.index]
+        return parent.grid_indices[self.spectral_index]
     
     @property
     def position(self) -> Optional[np.ndarray]:
@@ -210,7 +209,7 @@ class Spectrum:
         parent: Measurement = self._parent
         if not parent or parent.positions is None:
             return None
-        return parent.positions[self.index]
+        return parent.positions[self.spectral_index]
         
     @property
     def n_points(self) -> int:
