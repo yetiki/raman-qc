@@ -38,7 +38,11 @@ class Metadata:
     """
     def __init__(self,
                  data: Optional[Dict[str, Any]] = None) -> None:
-        
+        if not isinstance(data, (type(None), dict)):
+            raise TypeError(
+                f"Invalid type: metadata must be a dictionary or None. ",
+                f"Got type='{type(data)}'."
+            )
         self._data: Dict[str, Any] = data or {}
 
     def __getitem__(self, key) -> Any:

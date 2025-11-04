@@ -7,6 +7,26 @@ import pytest
 from typing import Any, Dict
 from ramanqc.metadata import Metadata
 
+def test_valid_intit():
+    # valid initialization with no data
+    metadata: Metadata = Metadata()
+    assert metadata.n_keys == 0
+
+    # valid initialization with dictionary data
+    data: Dict[str, Any] = {
+        'str_value': 'str',
+        'int_value': 1,
+        'float_value': 0.1,
+        'invalid attribute key': 0,
+    }
+    metadata: Metadata = Metadata(data)
+    assert metadata.n_keys == 4
+
+def test_invalid_init():
+    # invalid initialization with non-dict data
+    with pytest.raises(TypeError):
+        _ = Metadata(123)
+
 def test_dict_style_access():
     """Test accessing metadata values using dict-style access."""
     data : Dict[str, Any] = {
