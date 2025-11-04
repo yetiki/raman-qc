@@ -109,9 +109,20 @@ def test_n_keys():
     assert metadata.n_keys == 2
 
 def test_update():
+    # new keys
+    metadata: Metadata = Metadata({'key': 'value'})
+    metadata.update({'new_key': 'new_value'})
+    assert metadata == Metadata({'key': 'value', 'new_key': 'new_value'})
+
+    # overwrite existing key
     metadata: Metadata = Metadata({'key': 'value'})
     metadata.update({'key': 'new_value'})
     assert metadata['key'] == 'new_value'
+
+     # without overwriting existing key
+    metadata: Metadata = Metadata({'key': 'value'})
+    metadata.update({'key': 'new_value'}, overwrite=False)
+    assert metadata['key'] == 'value'
 
 def test_merge():
     metadata1: Metadata = Metadata({'key1': 'value1'})

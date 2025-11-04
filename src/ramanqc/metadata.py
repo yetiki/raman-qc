@@ -130,9 +130,10 @@ class Metadata:
         """Return the metadata as a dictionary."""
         return dict(self._data)
 
-    def update(self, other: Dict[str, Any], overwrite=True) -> None:
-        """Update metadata with another dictionary."""
-        for k, v in other.items():
+    def update(self, other: Union[Self, Dict[str, Any]], overwrite=True) -> None:
+        """Update metadata with another metadata object or dictionary."""
+        other: Metadata = self.as_metadata(other)
+        for k, v in other._data.items():
             if overwrite or k not in self._data:
                 self._data[k] = v
     
