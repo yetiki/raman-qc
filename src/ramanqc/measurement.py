@@ -6,8 +6,8 @@ Updated: 2025-11-03
 """
 from __future__ import annotations
 from typing import Optional, Union, Any, List, Dict, Tuple, Sequence
+
 import numpy as np
-import weakref
 from ramanqc.metadata import Metadata
 from ramanqc.spectrum import Spectrum
 from ramanqc.spatial_profile import SpatialProfile
@@ -44,6 +44,7 @@ class Measurement():
         # ensure each spectrum in spectra have the same dtype, length, and wavenumbers
         self._validate_spectra()
 
+        # infer measurement profile type to be a 'point' spectrum
         if len(self._spectra) == 1 and grid_indices is None and positions is None:
             grid_indices: np.ndarray = np.zeros(shape=(1, 1))
 

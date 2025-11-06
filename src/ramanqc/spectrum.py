@@ -5,15 +5,14 @@ Date: 2025-10-20
 Updated: 2025-11-03
 """
 from __future__ import annotations
-import numpy as np
-import weakref
-
 from typing import Optional, Union, Self, Any, Dict, Tuple, List
-from ramanqc.metadata import Metadata
-
 from typing import TYPE_CHECKING 
 if TYPE_CHECKING:
     from ramanqc.measurement import Measurement  # type hints only, avoid circular referencing
+
+import numpy as np
+import weakref
+from ramanqc.metadata import Metadata
 
 class Spectrum:
     """

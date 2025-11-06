@@ -5,10 +5,8 @@ Date: 2025-10-20
 Updated: 2025-10-24
 """
 
-from typing import Optional, Literal, Union, Self, Any, List, Dict, Tuple, Sequence, Set
+from typing import Optional, Literal, Union, Any, List, Dict, Tuple, Sequence, Set
 import numpy as np
-
-from typing import List, Tuple, Optional, Literal, Union
 
 class SpatialProfile:
     """

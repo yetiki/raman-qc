@@ -10,13 +10,11 @@ clinical translation.
 It is implementation-agnostic and focuses on structure, documentation, and expected inputs/outputs.
 """
 
-from typing import Self, List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any, Optional
 import numpy as np
 from sklearn.base import BaseEstimator
-from typing import Any, Dict, List, Set, Literal, Optional, Union
+from typing import Any, Dict, List, Optional
 import numpy as np
-
-
 
 class Dataset:
     """
