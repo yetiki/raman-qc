@@ -36,7 +36,7 @@ class Measurement():
             grid_indices: Optional[Union[np.ndarray, Sequence[Sequence[int]]]] = None,
             positions: Optional[Union[np.ndarray, Sequence[Sequence[int]]]] = None,
             metadata: Optional[Union[Metadata, Dict[str, Any]]] = None,
-            percolate_metadata: bool = True
+            percolate_metadata: bool = False
         ) -> None:
         self._spectra: List[Spectrum] = spectra
         self._metadata: Metadata = Metadata.as_metadata(metadata)
@@ -231,7 +231,7 @@ class Measurement():
         intensities: np.ndarray,
         positions: np.ndarray = None,
         metadata: Union[Metadata, Dict[str, Any]] = None,
-        percolate_metadata: bool = True,
+        percolate_metadata: bool = False,
         infer_grid_indices: bool = False,
     ) -> None:
         """Create a Measurement instance from wavenumber and intensity arrays."""
