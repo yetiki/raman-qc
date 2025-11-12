@@ -8,11 +8,11 @@ from __future__ import annotations
 from typing import Optional, Union, Self, Any, Dict, Tuple, List
 from typing import TYPE_CHECKING 
 if TYPE_CHECKING:
-    from rapidqc.measurement import Measurement  # type hints only, avoid circular referencing
+    from rapidqc.core.containers.measurement import Measurement  # type hints only, avoid circular referencing
 
 import numpy as np
 import weakref
-from rapidqc.metadata import Metadata
+from rapidqc.core.containers.metadata import Metadata
 
 class Spectrum:
     """

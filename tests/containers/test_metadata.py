@@ -7,7 +7,7 @@ Updated: 2025-11-12
 
 import pytest
 from typing import Any, Dict
-from rapidqc.metadata import Metadata
+from rapidqc.core.containers.metadata import Metadata
 
 def test_valid_intit():
     # valid initialization with no data

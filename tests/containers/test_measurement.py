@@ -1,8 +1,15 @@
+"""
+Author: Yoshiki Cook
+Date: 2025-10-22
+
+Updated: 2025-11-12
+"""
+
 import numpy as np
 import pytest
-from rapidqc.measurement import Measurement
-from rapidqc.spectrum import Spectrum
-from rapidqc.metadata import Metadata
+from rapidqc.core.containers.measurement import Measurement
+from rapidqc.core.containers.spectrum import Spectrum
+from rapidqc.core.containers.metadata import Metadata
 
 def test_valid_init():
     # with metadata

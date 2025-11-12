@@ -7,7 +7,7 @@ Updated: 2025-11-12
 
 import pytest
 import numpy as np
-from rapidqc.spatial_profile import SpatialProfile
+from rapidqc.core.containers.spatial_profile import SpatialProfile
 
 def test_valid_init_with_grid_indices():
     # point

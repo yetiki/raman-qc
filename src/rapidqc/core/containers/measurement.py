@@ -8,9 +8,9 @@ from __future__ import annotations
 from typing import Optional, Union, Any, List, Dict, Tuple, Sequence
 
 import numpy as np
-from rapidqc.metadata import Metadata
-from rapidqc.spectrum import Spectrum
-from rapidqc.spatial_profile import SpatialProfile
+from rapidqc.core.containers.metadata import Metadata
+from rapidqc.core.containers.spectrum import Spectrum
+from rapidqc.core.containers.spatial_profile import SpatialProfile
 
 class Measurement():
     """

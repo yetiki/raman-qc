@@ -8,8 +8,8 @@ Updated: 2025-11-12
 import pytest
 from typing import Optional, Union, Self, Any, Dict, Tuple
 import numpy as np
-from rapidqc.spectrum import Spectrum
-from rapidqc.metadata import Metadata
+from rapidqc.core.containers.spectrum import Spectrum
+from rapidqc.core.containers.metadata import Metadata
 
 def test_valid_init():
     # valid wavenumbers and intensities without metadata
