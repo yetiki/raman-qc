@@ -2,14 +2,14 @@
 Author: Yoshiki Cook
 Date: 2025-10-22
 
-Updated: 2025-11-03
+Updated: 2025-11-12
 """
 
 import pytest
 from typing import Optional, Union, Self, Any, Dict, Tuple
 import numpy as np
-from ramanqc.spectrum import Spectrum
-from ramanqc.metadata import Metadata
+from rapidqc.spectrum import Spectrum
+from rapidqc.metadata import Metadata
 
 def test_valid_init():
     # valid wavenumbers and intensities without metadata

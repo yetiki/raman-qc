@@ -2,12 +2,12 @@
 Author: Yoshiki Cook
 Date: 2025-10-22
 
-Updated: 2025-10-24
+Updated: 2025-11-12
 """
 
 import pytest
 import numpy as np
-from ramanqc.spatial_profile import SpatialProfile
+from rapidqc.spatial_profile import SpatialProfile
 
 def test_valid_init_with_grid_indices():
     # point

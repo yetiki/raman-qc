@@ -2,7 +2,7 @@
 Author: Yoshiki Cook
 Date: 2025-10-20
 
-Updated: 2025-10-24
+Updated: 2025-11-12
 """
 
 from typing import Optional, Literal, Union, Any, List, Dict, Tuple, Sequence, Set

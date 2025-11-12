@@ -1,8 +1,4 @@
 """
-raman_qc/core_structure.py
-
-Framework: Raman-QC — Validation and Quality Control Framework for Raman Spectral Pre-processing
------------------------------------------------------------------------------------------------
 This module defines the class and function skeletons (interfaces) used to build,
 validate, and report on Raman spectral pre-processing pipelines intended for
 clinical translation. 

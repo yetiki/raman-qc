@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
-from ramanqc.measurement import Measurement
-from ramanqc.spectrum import Spectrum
-from ramanqc.metadata import Metadata
+from rapidqc.measurement import Measurement
+from rapidqc.spectrum import Spectrum
+from rapidqc.metadata import Metadata
 
 def test_valid_init():
     # with metadata

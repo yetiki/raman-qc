@@ -2,17 +2,17 @@
 Author: Yoshiki Cook
 Date: 2025-10-20
 
-Updated: 2025-11-03
+Updated: 2025-11-12
 """
 from __future__ import annotations
 from typing import Optional, Union, Self, Any, Dict, Tuple, List
 from typing import TYPE_CHECKING 
 if TYPE_CHECKING:
-    from ramanqc.measurement import Measurement  # type hints only, avoid circular referencing
+    from rapidqc.measurement import Measurement  # type hints only, avoid circular referencing
 
 import numpy as np
 import weakref
-from ramanqc.metadata import Metadata
+from rapidqc.metadata import Metadata
 
 class Spectrum:
     """

@@ -2,15 +2,15 @@
 Author: Yoshiki Cook
 Date: 2025-10-20
 
-Updated: 2025-11-03
+Updated: 2025-11-12
 """
 from __future__ import annotations
 from typing import Optional, Union, Any, List, Dict, Tuple, Sequence
 
 import numpy as np
-from ramanqc.metadata import Metadata
-from ramanqc.spectrum import Spectrum
-from ramanqc.spatial_profile import SpatialProfile
+from rapidqc.metadata import Metadata
+from rapidqc.spectrum import Spectrum
+from rapidqc.spatial_profile import SpatialProfile
 
 class Measurement():
     """

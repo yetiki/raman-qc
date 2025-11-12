@@ -1,11 +1,13 @@
 """
 Author: Yoshiki Cook
 Date: 2025-10-22
+
+Updated: 2025-11-12
 """
 
 import pytest
 from typing import Any, Dict
-from ramanqc.metadata import Metadata
+from rapidqc.metadata import Metadata
 
 def test_valid_intit():
     # valid initialization with no data
